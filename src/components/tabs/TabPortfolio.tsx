@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 
 import { useState, useEffect, useCallback } from 'react'
 import { calcCsvImportDiff } from '@/app/actions/csv-import'
@@ -59,9 +60,28 @@ export function TabPortfolio() {
   async function batchScore() {
     const apiKey = localStorage.getItem('qtkey') || ''
     if (!apiKey) { alert('请先保存 API Key'); return }
+    if (!items.length) { alert('持仓为空'); return }
+    if (!confirm(`批量评分 ${items.length} 只持仓，预计约 ${items.length * 6} 秒，确认开始？`)) return
     setBatchLoad(true)
-    // TODO: 各持仓を順次 /api/analyze で評価
-    setTimeout(() => setBatchLoad(false), 2000)
+    let done = 0
+    for (const item of items) {
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+          body: JSON.stringify({ code: item.code }),
+        })
+        const json = await res.json()
+        if (json.ok) {
+          done++
+          // 履歴への保存はapi/analyze側で自動的に行われる
+        }
+      } catch { /* 個別エラーは無視して継続 */ }
+      // レート制限対策：6秒待機
+      if (done < items.length) await new Promise(r => setTimeout(r, 6000))
+    }
+    setBatchLoad(false)
+    alert(`批量评分完成：${done}/${items.length} 只`)
   }
 
   const btnStyle = (color: string, bg: string) => ({
@@ -123,6 +143,11 @@ export function TabPortfolio() {
         </div>
       </Card>
 
+      {/* ⑤ 持仓对比排名 */}
+      {items.length > 1 && (
+        <PortfolioRanking items={items} />
+      )}
+
       {csvModal && (
         <CsvModal
           currentItems={items}
@@ -143,7 +168,7 @@ export function TabPortfolio() {
 }
 
 // ── 持仓カード ──
-function PortCard({ item }: { item: PortfolioItem }) {
+function PortCard({ item }: { item: PortfolioItem; [k:string]:unknown }) {
   const [showLogic, setShowLogic] = useState(false)
   const hasCost  = item.cost > 0
   const hasPrice = item.price > 0
@@ -600,6 +625,99 @@ function EditPortfolioModal({
             {saving ? '保存中…' : '确认保存'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+
+// ── ⑤ 持仓対比ランキング ──
+function PortfolioRanking({ items }: { items: PortfolioItem[] }) {
+  type SortKey = 'pnlPct' | 'pnlAmt' | 'cost' | 'qty'
+  const [sortKey, setSortKey] = React.useState<SortKey>('pnlPct')
+
+  const ranked = [...items]
+    .filter(i => i.cost > 0 && i.price > 0)
+    .map(i => ({
+      ...i,
+      pnlPct: ((i.price - i.cost) / i.cost) * 100,
+      pnlAmt: (i.price - i.cost) * (i.qty || 0),
+    }))
+    .sort((a, b) => {
+      if (sortKey === 'pnlPct') return b.pnlPct - a.pnlPct
+      if (sortKey === 'pnlAmt') return b.pnlAmt - a.pnlAmt
+      if (sortKey === 'cost')   return b.cost - a.cost
+      return b.qty - a.qty
+    })
+
+  if (ranked.length === 0) return null
+
+  const sortBtns: { key: SortKey; label: string }[] = [
+    { key: 'pnlPct', label: '涨跌幅' },
+    { key: 'pnlAmt', label: '盈亏额' },
+    { key: 'cost',   label: '成本价' },
+    { key: 'qty',    label: '持股数' },
+  ]
+
+  return (
+    <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)',
+      borderRadius:12, padding:'14px 16px', marginBottom:12 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <span style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.12em' }}>
+          PORTFOLIO RANK · 持仓对比排名
+        </span>
+        <div style={{ display:'flex', gap:6 }}>
+          {sortBtns.map(b => (
+            <button key={b.key} onClick={() => setSortKey(b.key)} style={{
+              fontFamily:'IBM Plex Mono', fontSize:9, padding:'3px 8px',
+              border:`1px solid ${sortKey===b.key ? 'var(--c)' : 'var(--bd)'}`,
+              borderRadius:4, cursor:'pointer',
+              color: sortKey===b.key ? 'var(--c)' : 'var(--t3)',
+              backgroundColor:'transparent',
+            }}>{b.label}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ overflowX:'auto' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
+          <thead>
+            <tr style={{ borderBottom:'1px solid var(--bd)' }}>
+              {['#','股票','现价','成本','涨跌幅','盈亏额','持股数'].map(h => (
+                <th key={h} style={{ textAlign:'left', padding:'6px 10px 6px 0',
+                  fontSize:9, color:'var(--t2)', fontWeight:500 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ranked.map((item, idx) => {
+              const pnlColor = item.pnlPct > 0 ? 'var(--r)' : item.pnlPct < 0 ? 'var(--g)' : 'var(--t2)'
+              return (
+                <tr key={item.code} style={{ borderBottom:'1px solid rgba(56,200,255,0.04)' }}>
+                  <td style={{ padding:'7px 10px 7px 0', color:'var(--t3)' }}>{idx+1}</td>
+                  <td style={{ padding:'7px 10px 7px 0' }}>
+                    <div style={{ fontWeight:700, color:'var(--t)' }}>{item.name}</div>
+                    <div style={{ fontSize:9, color:'var(--c)' }}>{item.code}</div>
+                  </td>
+                  <td style={{ padding:'7px 10px 7px 0', color:'var(--t)', fontWeight:700 }}>
+                    ¥{item.price.toFixed(2)}
+                  </td>
+                  <td style={{ padding:'7px 10px 7px 0', color:'var(--t2)' }}>
+                    ¥{item.cost.toFixed(2)}
+                  </td>
+                  <td style={{ padding:'7px 10px 7px 0', color:pnlColor, fontWeight:700 }}>
+                    {item.pnlPct > 0 ? '+' : ''}{item.pnlPct.toFixed(2)}%
+                  </td>
+                  <td style={{ padding:'7px 10px 7px 0', color:pnlColor }}>
+                    {item.pnlAmt > 0 ? '+' : ''}¥{Math.round(item.pnlAmt).toLocaleString()}
+                  </td>
+                  <td style={{ padding:'7px 10px 7px 0', color:'var(--t2)' }}>
+                    {item.qty > 0 ? item.qty.toLocaleString() : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   )

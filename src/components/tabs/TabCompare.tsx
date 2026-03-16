@@ -126,6 +126,27 @@ export function TabCompare() {
             </button>
           )}
 
+          <button
+            onClick={() => {
+              // 持仓から銘柄コードを同期
+              try {
+                const PORTFOLIO_KEY = 'portfolio_v7'
+                const raw = localStorage.getItem(PORTFOLIO_KEY)
+                if (!raw) { alert('持仓数据为空'); return }
+                const items = JSON.parse(raw)
+                const portfolioCodes = items.map((p: { code: string }) => p.code).slice(0, 6)
+                if (!portfolioCodes.length) { alert('持仓数据为空'); return }
+                setCodes(portfolioCodes)
+              } catch { alert('读取持仓失败') }
+            }}
+            style={{
+              fontFamily:'IBM Plex Mono', fontSize:11, padding:'8px 14px',
+              border:'1px solid rgba(0,232,122,0.3)', borderRadius:6,
+              color:'var(--g)', backgroundColor:'transparent', cursor:'pointer',
+              alignSelf:'flex-end',
+            }}>
+            📁 从持仓导入
+          </button>
           <button onClick={runCompare} disabled={running} style={{
             display:'inline-flex', alignItems:'center', gap:6,
             fontFamily:'IBM Plex Mono', fontSize:11, padding:'8px 20px',

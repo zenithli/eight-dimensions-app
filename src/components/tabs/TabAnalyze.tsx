@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 
 import { useState } from 'react'
 import { Card } from '@/components/shared/Card'
@@ -163,6 +164,17 @@ export function TabAnalyze() {
           <button onClick={() => run()} disabled={loading} style={S.btn(loading)}>
             {loading ? '⟳ 分析中…' : '🔍 开始分析'}
           </button>
+          {result && (
+            <button onClick={() => { setResult(null); run() }} disabled={loading}
+              style={{
+                fontFamily:'IBM Plex Mono', fontSize:10, padding:'9px 14px',
+                border:'1px solid rgba(247,201,72,0.4)', color:'var(--y)',
+                backgroundColor:'transparent', borderRadius:6, cursor:'pointer',
+                whiteSpace:'nowrap' as const, opacity: loading ? 0.5 : 1,
+              }}>
+              ↺ 强制刷新
+            </button>
+          )}
         </div>
         <div style={S.quickRow}>
           <span style={S.quickLabel}>快速选择：</span>
@@ -206,6 +218,79 @@ export function TabAnalyze() {
       )}
 
       {result && !loading && <AnalysisResultCard result={result} />}
+
+      {/* ④ 止損仓位計算器 */}
+      {result && !loading && (
+        <StopLossCalc price={result.price} stopLoss={result.stopLoss} />
+      )}
+    </div>
+  )
+}
+
+// ── 止損仓位計算器 ──
+function StopLossCalc({ price, stopLoss }: { price: number; stopLoss: number }) {
+  const [capital, setCapital] = React.useState('100000')
+  const [maxLoss, setMaxLoss] = React.useState('2')
+  const [open, setOpen] = React.useState(false)
+
+  const maxLossAmt   = parseFloat(capital||'0') * parseFloat(maxLoss||'0') / 100
+  const riskPerShare = price - stopLoss
+  const maxShares    = riskPerShare > 0 ? Math.floor(maxLossAmt / riskPerShare / 100) * 100 : 0
+  const posAmt       = maxShares * price
+  const posRatio     = parseFloat(capital||'1') > 0 ? posAmt / parseFloat(capital) * 100 : 0
+
+  const inStyle = {
+    width:'100%', backgroundColor:'var(--bg3)' as const, border:'1px solid var(--bd)',
+    color:'var(--t)', padding:'6px 8px', borderRadius:5,
+    fontFamily:'IBM Plex Mono', fontSize:12, outline:'none',
+  }
+
+  return (
+    <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)',
+      borderRadius:12, marginTop:8, overflow:'hidden' }}>
+      <div onClick={() => setOpen(o => !o)} style={{
+        padding:'10px 16px', cursor:'pointer',
+        display:'flex', justifyContent:'space-between', alignItems:'center',
+      }}>
+        <span style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.12em' }}>
+          POSITION CALC · 止损仓位计算器
+        </span>
+        <span style={{ color:'var(--t3)', fontSize:11 }}>{open ? '▴' : '▾'}</span>
+      </div>
+      {open && (
+        <div style={{ padding:'0 16px 16px', borderTop:'1px solid var(--bd)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginTop:12 }}>
+            <div>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', marginBottom:4 }}>总资金（元）</div>
+              <input type="number" value={capital} onChange={e => setCapital(e.target.value)} style={inStyle} />
+            </div>
+            <div>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', marginBottom:4 }}>最大亏损（%）</div>
+              <input type="number" value={maxLoss} onChange={e => setMaxLoss(e.target.value)} style={inStyle} />
+            </div>
+            <div>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', marginBottom:4 }}>止损价 / 入场价</div>
+              <div style={{ ...inStyle, color:'var(--t2)' }}>¥{stopLoss.toFixed(2)} / ¥{price.toFixed(2)}</div>
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginTop:12 }}>
+            {[
+              { label:'最大持股数', val:`${maxShares.toLocaleString()}股`, color:'var(--c)' },
+              { label:'建仓金额',   val:`¥${posAmt.toLocaleString(undefined,{maximumFractionDigits:0})}`, color:'var(--y)' },
+              { label:'仓位比例',   val:`${posRatio.toFixed(1)}%`, color: posRatio>50?'var(--r)':posRatio>30?'var(--y)':'var(--g)' },
+            ].map(({label, val, color}) => (
+              <div key={label} style={{ backgroundColor:'var(--bg3)', borderRadius:8, padding:'10px 12px',
+                border:'1px solid rgba(56,200,255,0.15)' }}>
+                <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', marginBottom:4 }}>{label}</div>
+                <div style={{ fontFamily:'IBM Plex Mono', fontSize:16, fontWeight:700, color }}>{val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', marginTop:8 }}>
+            公式：最大亏损额 ÷ (入场价 − 止损价) = 最大持股数 · 每股风险¥{riskPerShare.toFixed(2)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -120,7 +120,6 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
       {/* ── 走勢図パネル ── */}
       <TrendPanel
         code={result.code}
-        name={result.name}
         stopLoss={result.stopLoss}
         targetPrice={result.targetPrice}
       />
@@ -140,7 +139,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
 }
 
 function DimRow({ icon, name, color, score, analysis, isLast }: {
-  icon:string; name:string; color:string; score:number; analysis:string; isLast:boolean
+  icon:string; name:string; color:string; score:number; analysis:string; isLast:boolean; [k:string]:unknown
 }) {
   const [open, setOpen] = useState(false)
   const pct = (score / 5) * 100

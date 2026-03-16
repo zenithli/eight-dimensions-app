@@ -78,6 +78,8 @@ export function TabPool() {
   const [statusMsg, setStatusMsg]  = useState('')
   const [statusOk, setStatusOk]    = useState(true)
   const [showAdd, setShowAdd]      = useState(false)
+  const [batchLoad, setBatchLoad]         = useState(false)
+  const [batchProgress, setBatchProgress] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem(POOL_KEY)
@@ -126,6 +128,56 @@ export function TabPool() {
       setStatusMsg(`✕ ${msg}`)
       addLog(msg, 'error', '', 'pool')
     } finally { setLoading(false) }
+  }
+
+  // ② 個別更新
+  async function refreshOne(code: string) {
+    const key = localStorage.getItem('qtkey') || ''
+    if (!key) { alert('请先输入API Key'); return }
+    try {
+      const res  = await fetch('/api/quote', { method:'POST',
+        headers:{ 'Content-Type':'application/json', 'x-api-key': key },
+        body: JSON.stringify({ codes:[code] }) })
+      const json = await res.json()
+      if (!json.ok) throw new Error(json.error)
+      const q = json.data?.[0]
+      if (!q) return
+      const updated = rawStocks.map(s =>
+        s.code === code
+          ? { ...s, price:q.price, chg:q.changePct, d3:q.rise3d??0,
+              d6:q.rise6d, m1:q.rise1m, mon:q.riseMon,
+              d90:(q.rise3m !== 0 ? q.rise3m : undefined),
+              volr:q.volRatio, dataMode:'realtime' }
+          : s
+      )
+      save(updated)
+      addLog(`${code} 单支更新完成`, 'ok', `¥${q.price}`, 'pool')
+    } catch(e: unknown) {
+      addLog(`${code} 更新失败`, 'error', e instanceof Error ? e.message : '', 'pool')
+    }
+  }
+
+  // ① 一括分析
+  async function batchAnalyze() {
+    const apiKey = localStorage.getItem('qtkey') || ''
+    if (!apiKey) { alert('请先保存 API Key'); return }
+    if (!confirm(`批量评分 ${rawStocks.length} 只自选股，预计约 ${rawStocks.length * 6} 秒？`)) return
+    setBatchLoad(true); setBatchProgress('')
+    let done = 0
+    for (const s of rawStocks) {
+      setBatchProgress(`(${done}/${rawStocks.length})`)
+      try {
+        await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+          body: JSON.stringify({ code: s.code }),
+        })
+        done++
+      } catch { /* 継続 */ }
+      if (done < rawStocks.length) await new Promise(r => setTimeout(r, 6000))
+    }
+    setBatchLoad(false); setBatchProgress('')
+    alert(`批量评分完成：${done}/${rawStocks.length} 只`)
   }
 
   async function calcMA20All() {
@@ -193,8 +245,9 @@ export function TabPool() {
               style={C.btn('var(--g)','rgba(0,232,122,0.06)')}>
               {ma20Loading ? '⟳ 计算中…' : '📐 MA20乖离'}
             </button>
-            <button style={C.btn('var(--y)','rgba(247,201,72,0.06)')}>
-              📅 月度轮换
+            <button onClick={batchAnalyze} disabled={batchLoad || loading}
+              style={C.btn('var(--y)','rgba(247,201,72,0.06)')}>
+              {batchLoad ? `⟳ 评分中 ${batchProgress}` : '⚡ 批量评分'}
             </button>
             <button onClick={() => setShowAdd(true)}
               style={C.btn('var(--p)','rgba(200,122,255,0.06)')}>
@@ -241,13 +294,16 @@ export function TabPool() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s, i) => <PoolRow key={s.code} stock={s} rank={i+1} onRemove={(code) => {
+              {sorted.map((s, i) => <PoolRow key={s.code} stock={s} rank={i+1}
+                  onRemove={(code) => {
                     setRawStocks(prev => {
                       const next = prev.filter(x => x.code !== code)
                       localStorage.setItem(POOL_KEY, JSON.stringify(next))
                       return next
                     })
-                  }} />)}
+                  }}
+                  onRefreshOne={refreshOne}
+                />)}
               {sorted.length === 0 && (
                 <tr><td colSpan={11} style={{ textAlign:'center', padding:'40px 0', color:'var(--t3)' }}>
                   暂无股票
@@ -296,7 +352,7 @@ export function TabPool() {
   )
 }
 
-function PoolRow({ stock: s, rank, onRemove }: { stock: PoolStockView; rank: number; onRemove: (code: string) => void }) {
+function PoolRow({ stock: s, rank, onRemove, onRefreshOne }: { stock: PoolStockView; rank: number; onRemove: (code: string) => void; onRefreshOne?: (code: string) => void ; [k:string]:unknown }) {
   const { biasLevel, signal, biasIsReal } = s
   const biasVal = s.ma20Bias ?? s.m1 ?? 0
 
@@ -352,17 +408,26 @@ function PoolRow({ stock: s, rank, onRemove }: { stock: PoolStockView; rank: num
         {s.targetPrice.toFixed(2)}
       </td>
       <td style={{ padding:'9px 6px 9px 0' }}>
-        <button
-          onClick={() => {
-            if (!confirm(`确认从股票池中移除 ${s.name}（${s.code}）？`)) return
-            onRemove(s.code)
-          }}
-          style={{
-            fontSize:9, padding:'3px 8px',
-            border:'1px solid rgba(255,58,110,0.3)', borderRadius:4,
-            color:'var(--r)', backgroundColor:'transparent', cursor:'pointer',
-            transition:'all .15s',
-          }}>移除</button>
+        <div style={{ display:'flex', gap:4 }}>
+          {onRefreshOne && (
+            <button onClick={() => onRefreshOne(s.code)} style={{
+              fontSize:9, padding:'3px 8px',
+              border:'1px solid rgba(56,200,255,0.3)', borderRadius:4,
+              color:'var(--c)', backgroundColor:'transparent', cursor:'pointer',
+            }}>↻</button>
+          )}
+          <button
+            onClick={() => {
+              if (!confirm(`确认从股票池中移除 ${s.name}（${s.code}）？`)) return
+              onRemove(s.code)
+            }}
+            style={{
+              fontSize:9, padding:'3px 8px',
+              border:'1px solid rgba(255,58,110,0.3)', borderRadius:4,
+              color:'var(--r)', backgroundColor:'transparent', cursor:'pointer',
+              transition:'all .15s',
+            }}>移除</button>
+        </div>
       </td>
     </tr>
   )

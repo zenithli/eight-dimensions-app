@@ -159,7 +159,7 @@ export function LogPanel() {
   )
 }
 
-function LogRow({ log }: { log: import('@/lib/logger').LogEntry }) {
+function LogRow({ log }: { log: import('@/lib/logger').LogEntry; [k:string]:unknown }) {
   const [expanded, setExpanded] = useState(false)
   const color = LEVEL_COLOR[log.level]
   const icon  = LEVEL_ICON[log.level]

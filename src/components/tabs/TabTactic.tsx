@@ -198,8 +198,9 @@ function SectionTitle({ icon, label, sub }: { icon:string; label:string; sub:str
 }
 
 // ── 銘柄カード ──
-function StockCard({ code, name, role, cost, note, color }: {
-  code:string; name:string; role:string; cost:number; note:string; color?:string; weight?:string; stopLoss?:number
+function StockCard({ code, name, role, cost, note, color, weight, stopLoss }: {
+  code:string; name:string; role:string; cost:number; note:string
+  color?:string; weight?:string; stopLoss?:number; [k:string]:unknown
 }) {
   return (
     <div style={{

@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/shared/Card'
@@ -32,6 +33,7 @@ export function TabHistory() {
   const [loading, setLoading]         = useState(true)
   const [filterCode, setFilterCode]   = useState<string>('all')
   const [expandedId, setExpandedId]   = useState<number | null>(null)
+  const [chartCode, setChartCode]     = useState<string | null>(null)
   const [clearing, setClearing]       = useState(false)
   const [dbConnected, setDbConnected] = useState(false)
   const [error, setError]             = useState('')
@@ -213,6 +215,14 @@ export function TabHistory() {
         )}
 
         {/* 履歴テーブル */}
+        {/* ⑥ B分トレンドグラフ */}
+        {chartCode && (() => {
+          const history = entries.filter(e => e.code === chartCode).slice(0,30).reverse()
+          return history.length >= 2 ? (
+            <BScoreChart code={chartCode} history={history} onClose={() => setChartCode(null)} />
+          ) : null
+        })()}
+
         {!loading && filtered.length > 0 && (
           <div style={{ overflowX:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
@@ -229,10 +239,12 @@ export function TabHistory() {
               <tbody>
                 {filtered.map(entry => (
                   <HistoryRow
-                    key={entry.id}
+                    key={entry.id as number}
                     entry={entry}
                     expanded={expandedId === entry.id}
                     onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                    onChartClick={(code) => setChartCode(chartCode === code ? null : code)}
+                    isChartActive={chartCode === entry.code}
                   />
                 ))}
               </tbody>
@@ -257,11 +269,14 @@ export function TabHistory() {
 
 // ── 履歴テーブル行 ──
 function HistoryRow({
-  entry, expanded, onToggle,
+  entry, expanded, onToggle, onChartClick, isChartActive,
 }: {
-  entry:    HistoryEntryFull
-  expanded: boolean
-  onToggle: () => void
+  entry:         HistoryEntryFull
+  expanded:      boolean
+  onToggle:      () => void
+  onChartClick?: (code: string) => void
+  isChartActive?: boolean
+  [k: string]:   unknown
 }) {
   const signal  = getBSignal(entry.totalScore)
   const pctColor = entry.changePct > 0 ? 'var(--r)' : entry.changePct < 0 ? 'var(--g)' : 'var(--t3)'
@@ -300,7 +315,12 @@ function HistoryRow({
         </td>
         {/* 銘柄 */}
         <td style={{ padding:'9px 10px 9px 0' }}>
-          <div style={{ fontWeight:700, color:'var(--c)' }}>{entry.name}</div>
+          <div
+            style={{ fontWeight:700, color:'var(--c)', cursor:'pointer',
+              textDecoration: isChartActive ? 'underline' : 'none' }}
+            onClick={() => onChartClick?.(entry.code)}
+            title="点击查看B分走势"
+          >{entry.name}</div>
           <div style={{ fontSize:9, color:'var(--c)', fontFamily:'IBM Plex Mono' }}>{entry.code}</div>
         </td>
         {/* 価格 */}
@@ -416,4 +436,99 @@ function filterBtnStyle(active: boolean): React.CSSProperties {
     backgroundColor: active ? 'rgba(56,200,255,0.10)' : 'transparent',
     cursor:'pointer', transition:'all .15s',
   }
+}
+
+
+// ── ⑥ 历史B分トレンドグラフ ──
+function BScoreChart({ code, history, onClose }: {
+  code: string
+  history: { createdAt: string; totalScore: number; signal: string }[]
+  onClose: () => void
+}) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null)
+
+  React.useEffect(() => {
+    const cv = canvasRef.current
+    if (!cv || history.length < 2) return
+    const dpr = window.devicePixelRatio || 1
+    const W   = cv.parentElement?.clientWidth || 600
+    const H   = 100
+    cv.width  = W * dpr; cv.height = H * dpr
+    cv.style.width = W + 'px'; cv.style.height = H + 'px'
+    const ctx = cv.getContext('2d')!
+    ctx.scale(dpr, dpr)
+
+    const dark   = document.documentElement.getAttribute('data-theme') !== 'light'
+    const bgCol  = dark ? '#0c1422' : '#f0f3f8'
+    const lineCol= dark ? '#38c8ff' : '#0055cc'
+    const gridCol= dark ? 'rgba(56,200,255,0.1)' : 'rgba(0,80,180,0.1)'
+    const textCol= dark ? '#7a9dbb' : '#3a5a7a'
+
+    ctx.fillStyle = bgCol; ctx.fillRect(0, 0, W, H)
+    const PAD = { t:10, r:10, b:22, l:36 }
+    const gw  = W - PAD.l - PAD.r
+    const gh  = H - PAD.t - PAD.b
+    const n   = history.length
+    const scores = history.map(h => h.totalScore)
+    const xS  = (i: number) => PAD.l + i * (gw / (n - 1))
+    const yS  = (v: number) => PAD.t + gh - (Math.max(0, Math.min(5.5, v)) / 5.5) * gh
+
+    // グリッド・閾値線
+    ;([4.5, 4.0, 3.5] as number[]).forEach((v: number) => {
+      const y = yS(v)
+      ctx.strokeStyle = v >= 4.5 ? 'rgba(0,232,122,0.3)' : v >= 4.0 ? 'rgba(247,201,72,0.25)' : gridCol
+      ctx.lineWidth = 0.5
+      ctx.setLineDash([3, 3])
+      ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke()
+      ctx.setLineDash([])
+      ctx.fillStyle = textCol; ctx.font = `9px IBM Plex Mono`
+      ctx.fillText(String(v), 2, y + 3)
+    })
+
+    // B分折れ線
+    ctx.strokeStyle = lineCol; ctx.lineWidth = 2; ctx.setLineDash([])
+    ctx.beginPath()
+    scores.forEach((s: number, i: number) => { i === 0 ? ctx.moveTo(xS(i), yS(s)) : ctx.lineTo(xS(i), yS(s)) })
+    ctx.stroke()
+
+    // ポイント
+    scores.forEach((s: number, i: number) => {
+      ctx.beginPath()
+      ctx.arc(xS(i), yS(s), 3, 0, Math.PI * 2)
+      ctx.fillStyle = s >= 4.5 ? '#00e87a' : s >= 4.0 ? '#f7c948' : s >= 3.5 ? lineCol : '#ff3a6e'
+      ctx.fill()
+    })
+
+    // X軸ラベル（最初と最後）
+    ctx.fillStyle = textCol; ctx.font = '8px IBM Plex Mono'
+    ctx.fillText(history[0].createdAt.slice(5, 10), PAD.l, H - 4)
+    ctx.fillText(history[n-1].createdAt.slice(5, 10), xS(n-1) - 20, H - 4)
+  }, [history])
+
+  const latestScore = history[history.length - 1]?.totalScore ?? 0
+  const trend = history.length >= 2
+    ? history[history.length-1].totalScore - history[history.length-2].totalScore
+    : 0
+
+  return (
+    <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)',
+      borderRadius:8, padding:'10px 14px', marginBottom:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+        <span style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.1em' }}>
+          {code} · B分走势（{history.length}条记录）·
+          <span style={{ color: trend > 0 ? 'var(--r)' : trend < 0 ? 'var(--g)' : 'var(--t3)',
+            marginLeft:4 }}>
+            {trend > 0 ? '▲' : trend < 0 ? '▼' : '→'} {latestScore.toFixed(2)}
+          </span>
+        </span>
+        <button onClick={onClose} style={{
+          background:'transparent', border:'none', color:'var(--t3)',
+          cursor:'pointer', fontSize:14, padding:0,
+        }}>✕</button>
+      </div>
+      <div style={{ width:'100%', height:100 }}>
+        <canvas ref={canvasRef} style={{ width:'100%', height:'100%' }} />
+      </div>
+    </div>
+  )
 }
