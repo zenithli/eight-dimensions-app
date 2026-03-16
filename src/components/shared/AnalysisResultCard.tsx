@@ -420,4 +420,138 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
 
 
 /* ── RadarChart ── */
-function RadarChart
+function RadarChart({ scores }: { scores: Array<{ score: number }> }) {
+  const cx=120,cy=120,r=90,n=7
+  const labels=['热势','量价','Alpha','威科夫','板块','资金','基本']
+  const angle = (i:number) => (i/n)*2*Math.PI - Math.PI/2
+  const pt    = (i:number,v:number): [number,number] => [cx+((v/5)*r)*Math.cos(angle(i)), cy+((v/5)*r)*Math.sin(angle(i))]
+  const vals  = scores.slice(0,7).map(s=>s?.score??0)
+  return (
+    <svg width="240" height="240" viewBox="0 0 240 240" style={{ display:'block', margin:'0 auto' }}>
+      {[1,2,3,4,5].map(g=><polygon key={g} fill="none" stroke="rgba(0,207,255,0.08)" strokeWidth="0.5" points={Array.from({length:n},(_,i)=>pt(i,g).join(',')).join(' ')}/>)}
+      {Array.from({length:n},(_,i)=><line key={i} x1={cx} y1={cy} x2={pt(i,5)[0]} y2={pt(i,5)[1]} stroke="rgba(0,207,255,0.06)" strokeWidth="0.5"/>)}
+      <polygon fill="rgba(0,207,255,0.12)" stroke="#00cfff" strokeWidth="1.5" points={vals.map((v,i)=>pt(i,v).join(',')).join(' ')}/>
+      {labels.map((label,i)=>{const[x,y]=pt(i,5.8);return<text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="10" fontFamily="IBM Plex Mono,monospace" fill="var(--t2)">{label}</text>})}
+    </svg>
+  )
+}
+
+/* ── RRBar ── */
+function RRBar({ price,stopLoss,targetPrice }:{price:number;stopLoss:number;targetPrice:number}) {
+  const risk=price-stopLoss, reward=targetPrice-price, total=risk+reward
+  if (total<=0||risk<=0) return null
+  const rW=(risk/total)*100, reW=(reward/total)*100, rr=reward/risk
+  return (
+    <div>
+      <div style={{ height:10, borderRadius:5, overflow:'hidden', backgroundColor:'var(--bg3)', display:'flex', marginBottom:6 }}>
+        <div style={{ width:`${rW}%`, backgroundColor:'var(--r)', transition:'width 1.2s ease' }}/>
+        <div style={{ width:`${reW}%`, backgroundColor:'var(--g)', transition:'width 1.2s ease' }}/>
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'IBM Plex Mono,monospace', fontSize:9, color:'var(--t2)' }}>
+        <span style={{color:'var(--r)'}}>止损 -{risk.toFixed(2)}元 ({rW.toFixed(0)}%)</span>
+        <span style={{color:rr>=2?'var(--g)':rr>=1?'var(--y)':'var(--r)'}}>1:{rr.toFixed(1)}</span>
+        <span style={{color:'var(--g)'}}>+{reward.toFixed(2)}元 ({reW.toFixed(0)}%)</span>
+      </div>
+    </div>
+  )
+}
+
+/* ── PositionCalc ── */
+function PositionCalc({ price,stopLoss }:{price:number;stopLoss:number}) {
+  const [capital,setCapital]=useState('1000000')
+  const [maxLoss,setMaxLoss]=useState('2')
+  const cap=parseFloat(capital||'0'), ml=parseFloat(maxLoss||'0')
+  const maxLossAmt=cap*ml/100, riskPS=price-stopLoss
+  const maxShares=riskPS>0?Math.floor(maxLossAmt/riskPS/100)*100:0
+  const posAmt=maxShares*price
+  const posRatio=cap>0?posAmt/cap*100:0
+  const posColor=posRatio>50?'var(--r)':posRatio>30?'var(--y)':'var(--g)'
+  const inp:React.CSSProperties={
+    backgroundColor:'var(--bg3)',border:'1px solid var(--bd2)',color:'var(--t)',
+    fontFamily:'IBM Plex Mono,monospace',fontSize:12,padding:'9px 12px',
+    outline:'none',width:'100%',transition:'border 0.2s',
+  }
+  return (
+    <div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:12}}>
+        <div>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:6}}>总资金（元）</div>
+          <input type="number" value={capital} onChange={e=>setCapital(e.target.value)} style={inp}/>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:6}}>最大亏损（%）</div>
+          <input type="number" value={maxLoss} onChange={e=>setMaxLoss(e.target.value)} style={inp}/>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:6}}>止损价 / 入场价</div>
+          <div style={{...inp,color:'var(--t2)'}}>¥{stopLoss.toFixed(2)} / ¥{price.toFixed(2)}</div>
+        </div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:8}}>
+        {[
+          {label:'每股风险', val:`¥${riskPS.toFixed(2)}`,color:'var(--r)'},
+          {label:'最大持股数',val:`${maxShares.toLocaleString()}股`,color:'var(--c)'},
+          {label:'建仓金额', val:`¥${posAmt.toLocaleString(undefined,{maximumFractionDigits:0})}`,color:'var(--y)'},
+          {label:'仓位比例', val:`${posRatio.toFixed(1)}%`,color:posColor},
+        ].map(({label,val,color})=>(
+          <div key={label} style={{backgroundColor:'var(--bg3)',border:'1px solid rgba(0,207,255,0.15)',padding:'10px 12px',textAlign:'center'}}>
+            <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:4}}>{label}</div>
+            <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:16,fontWeight:700,color}}>{val}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{height:5,backgroundColor:'var(--bg3)',borderRadius:3,overflow:'hidden',marginBottom:5}}>
+        <div style={{height:'100%',width:`${Math.min(posRatio,100)}%`,backgroundColor:posColor,transition:'width 0.4s',borderRadius:3}}/>
+      </div>
+      {posRatio>50&&<div style={{fontSize:9,color:'var(--r)',fontFamily:'IBM Plex Mono,monospace',marginTop:3}}>⚠ 仓位超过50%，注意融资风险</div>}
+      <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',marginTop:5}}>公式：最大亏损额 ÷ 每股风险 → 最大A股 · 100股取整</div>
+    </div>
+  )
+}
+
+/* ── TradeLogicEdit ── */
+function TradeLogicEdit({ code,stopLoss }:{code:string;stopLoss:number}) {
+  const key=`logic_${code}`
+  const [data,setData]=useState({why:'',sell:'',no:''})
+  const [saved,setSaved]=useState(false)
+  useEffect(()=>{
+    try{const r=localStorage.getItem(key);if(r)setData(JSON.parse(r))}catch{}
+  },[key])
+  function autoSave(next:typeof data){
+    try{localStorage.setItem(key,JSON.stringify({...next,ts:Date.now()}))}catch{}
+    setSaved(true); setTimeout(()=>setSaved(false),1500)
+  }
+  function handleChange(field:keyof typeof data,val:string){
+    const next={...data,[field]:val}; setData(next); autoSave(next)
+  }
+  const ta:React.CSSProperties={
+    width:'100%',background:'var(--bg3)',color:'var(--t)',
+    fontFamily:'Noto Sans SC,sans-serif',fontSize:11,
+    padding:'8px 10px',resize:'vertical',outline:'none',lineHeight:1.7,
+  }
+  return (
+    <div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+        <div>
+          <div style={{fontSize:9,color:'var(--g)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'2px',marginBottom:6}}>① 买入理由（3个月逻辑）</div>
+          <textarea rows={4} value={data.why} onChange={e=>handleChange('why',e.target.value)}
+            placeholder="例：中东战争→煤炭供给紧张→价格中期看涨；股息率7%保底；逻辑有效期至战争结束"
+            style={{...ta,border:'1px solid var(--bd2)'}}/>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:'var(--r)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'2px',marginBottom:6}}>② 卖出条件（提前写死）</div>
+          <textarea rows={4} value={data.sell} onChange={e=>handleChange('sell',e.target.value)}
+            placeholder={`止损：跌破¥${stopLoss.toFixed(2)}（成本×0.92）\n逻辑破坏：___发生时卖出\n月评：连续两周B<3.5`}
+            style={{...ta,border:'1px solid rgba(255,45,85,0.3)'}}/>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:'var(--y)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'2px',marginBottom:6}}>③ 不会因以下原因卖（预判情绪陷阱）</div>
+          <textarea rows={4} value={data.no} onChange={e=>handleChange('no',e.target.value)}
+            placeholder={'· B分从5.0短期降到4.3\n· 大盘调整带动被动下跌\n· 看到其他标的涨得更多\n· 短期消息面扰动'}
+            style={{...ta,border:'1px solid rgba(255,210,63,0.3)'}}/>
+        </div>
+      </div>
+      {saved&&<div style={{marginTop:6,fontSize:9,color:'var(--g)',fontFamily:'IBM Plex Mono,monospace',textAlign:'right'}}>✓ 已自动保存</div>}
+    </div>
+  )
+}
