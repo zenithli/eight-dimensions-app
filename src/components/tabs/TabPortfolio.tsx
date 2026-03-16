@@ -117,7 +117,7 @@ export function TabPortfolio() {
           <button style={btnStyle('var(--r)','rgba(255,58,110,0.06)')}>
             🔄 强制全部刷新
           </button>
-          <span style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t3)' }}>
+          <span style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t2)' }}>
             共 {items.length} 只
           </span>
         </div>
@@ -165,7 +165,7 @@ function PortCard({ item }: { item: PortfolioItem }) {
       borderRadius:8, padding:'12px',
       transition:'border-color .15s',
     }}>
-      <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t3)', marginBottom:3 }}>
+      <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t2)', marginBottom:3 }}>
         {item.code}
       </div>
       <div style={{ fontWeight:700, color:'#fff', fontSize:14, marginBottom:4 }}>
@@ -173,7 +173,7 @@ function PortCard({ item }: { item: PortfolioItem }) {
       </div>
       <div style={{ fontFamily:'IBM Plex Mono', fontSize:11, color:'var(--t2)', marginBottom:6 }}>
         成本 {hasCost ? `${item.cost.toFixed(2)}元` : '—'}
-        {item.qty > 0 && <span style={{ marginLeft:8, color:'var(--t3)' }}>{item.qty.toLocaleString()}股</span>}
+        {item.qty > 0 && <span style={{ marginLeft:8, color:'var(--t2)' }}>{item.qty.toLocaleString()}股</span>}
       </div>
       {pnl !== null && (
         <div style={{
@@ -190,7 +190,7 @@ function PortCard({ item }: { item: PortfolioItem }) {
           fontSize:9, fontFamily:'IBM Plex Mono',
           padding:'2px 7px',
           border:'1px solid var(--bd)', borderRadius:3,
-          color:'var(--t3)',
+          color:'var(--t2)',
         }}>
           {item.role}
         </div>
@@ -386,7 +386,7 @@ function CsvModal({
                   <tr style={{ borderBottom:'1px solid var(--bd)' }}>
                     {['状态','代码','名称','成本价','数量','说明'].map((h: string) => (
                       <th key={h} style={{
-                        textAlign:'left', fontSize:9, color:'var(--t3)',
+                        textAlign:'left', fontSize:9, color:'var(--t2)',
                         paddingBottom:6, paddingRight:10, fontWeight:400,
                       }}>{h}</th>
                     ))}
@@ -541,7 +541,7 @@ function EditPortfolioModal({
               <tr style={{ borderBottom:'1px solid var(--bd)' }}>
                 {['代码','名称','成本价','数量','角色/备注','操作'].map((h: string) => (
                   <th key={h} style={{
-                    textAlign:'left', fontSize:9, color:'var(--t3)',
+                    textAlign:'left', fontSize:9, color:'var(--t2)',
                     paddingBottom:8, paddingRight:8, fontWeight:400,
                   }}>{h}</th>
                 ))}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { cstNow, cstDateSlash, cstHHMM, isTradeOpen } from '@/lib/core/time'
+import { calcMarketState, type MarketFilter } from '@/lib/core/b-score'
 
 interface AppHeaderProps {
   theme: 'dark' | 'light'
@@ -9,10 +10,11 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
-  const [timeStr, setTimeStr]   = useState('')
-  const [tradeOpen, setTradeOpen] = useState(false)
-  const [apiKey, setApiKey]     = useState('')
-  const [keySaved, setKeySaved] = useState(false)
+  const [timeStr, setTimeStr]       = useState('')
+  const [tradeOpen, setTradeOpen]   = useState(false)
+  const [apiKey, setApiKey]         = useState('')
+  const [keySaved, setKeySaved]     = useState(false)
+  const [marketFilter, setMarketFilter] = useState<MarketFilter | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('qtkey') || ''
@@ -28,6 +30,41 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
     }
     tick()
     const id = setInterval(tick, 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // 大盤状態を取得（取引時間中のみ、5分毎）
+  useEffect(() => {
+    async function fetchMarketState() {
+      try {
+        const res  = await fetch('/api/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codes: ['000001'] }),
+        })
+        const json = await res.json()
+        if (!json.ok || !json.data?.[0]) return
+        // MA20データは別途取得
+        const ma20Res = await fetch('/api/ma20', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codes: ['000001'] }),
+        })
+        const ma20Json = await ma20Res.json()
+        if (!ma20Json.ok || !ma20Json.data?.[0]) return
+        // 簡易的にbias値からMA20の方向を推定
+        const bias = ma20Json.data[0].bias ?? 0
+        // bias > 1% → 価格がMA20より上 → 上昇傾向
+        const mockMa20 = bias > 1
+          ? [4000, 4010, 4020, 4030, 4040]  // 強勢
+          : bias < -1
+            ? [4100, 4090, 4080, 4070, 4060]  // 弱勢
+            : [4050, 4060, 4055, 4058, 4052]   // 震荡
+        setMarketFilter(calcMarketState(mockMa20))
+      } catch { /* 取得失敗は無視 */ }
+    }
+    fetchMarketState()
+    const id = setInterval(fetchMarketState, 5 * 60 * 1000) // 5分毎
     return () => clearInterval(id)
   }, [])
 
@@ -121,6 +158,15 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 14,
     },
+    marketBadge: (color: string) => ({
+      fontFamily: 'IBM Plex Mono', fontSize: 10,
+      padding: '4px 10px', borderRadius: 4,
+      border: `1px solid ${color}40`,
+      color,
+      backgroundColor: `${color}08`,
+      cursor: 'default',
+      whiteSpace: 'nowrap' as const,
+    }),
   }
 
   return (
@@ -155,6 +201,13 @@ export function AppHeader({ theme, onToggleTheme }: AppHeaderProps) {
 
         {/* 右側 */}
         <div style={S.right}>
+          {marketFilter && (
+            <div style={S.marketBadge(marketFilter.color)}
+              title={marketFilter.warning}>
+              {marketFilter.state === 'strong'   ? '▲ 强势市' :
+               marketFilter.state === 'sideways' ? '⚠ 震荡市' : '▼ 弱势市'}
+            </div>
+          )}
           <div style={S.tradeBadge(tradeOpen)}>
             {tradeOpen ? '● 交易中' : '○ 休市'}
           </div>

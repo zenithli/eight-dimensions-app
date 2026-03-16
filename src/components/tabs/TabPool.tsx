@@ -311,8 +311,8 @@ function PoolRow({ stock: s, rank, onRemove }: { stock: PoolStockView; rank: num
     >
       <td style={{ padding:'9px 10px 9px 0', color:'var(--t3)' }}>{rank}</td>
       <td style={{ padding:'9px 10px 9px 0' }}>
-        <div style={{ fontWeight:700, color:'#fff' }}>{s.name}</div>
-        <div style={{ fontSize:9, color:'var(--t3)', marginTop:1 }}>{s.code}</div>
+        <div style={{ fontWeight:700, color:'var(--t)' }}>{s.name}</div>
+        <div style={{ fontSize:9, color:'var(--t2)', marginTop:1 }}>{s.code}</div>
       </td>
       <td style={{ padding:'9px 10px 9px 0' }}>
         <span style={{
