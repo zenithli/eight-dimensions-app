@@ -577,6 +577,13 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     }, 50)
   }, [drawTrend, drawBias, drawBS, drawRR, drawPrice])
 
+  // マウント時に自動でデータ取得（V6と同様に即座にロード）
+  useEffect(() => {
+    handleLoad()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])  // マウント時1回のみ
+
+  // データロード後に描画
   useEffect(() => {
     if (loaded && results.length > 0) drawAll(results)
   }, [loaded, results, drawAll])
@@ -627,15 +634,13 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
         </span>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <span style={{ fontFamily:m, fontSize:11, color:'var(--c)' }}>{code}</span>
+          {errMsg && <span style={{ fontSize:10, color:'var(--r)' }}>{errMsg}</span>}
+          {loading && <span style={{ fontSize:10, color:'var(--c)', fontFamily:m }}>⟳ 加载中…</span>}
           {loaded && (
-            <button onClick={() => drawAll(results)} style={{ fontFamily:m, fontSize:10, padding:'3px 10px', border:'1px solid var(--c)', borderRadius:3, cursor:'pointer', color:'var(--c)', backgroundColor:'transparent' }}>
+            <button onClick={handleLoad} style={{ fontFamily:m, fontSize:10, padding:'3px 10px', border:'1px solid var(--c)', borderRadius:3, cursor:'pointer', color:'var(--c)', backgroundColor:'transparent' }}>
               🔄 刷新
             </button>
           )}
-          {errMsg && <span style={{ fontSize:10, color:'var(--r)' }}>{errMsg}</span>}
-          <button onClick={handleLoad} disabled={loading} style={{ fontFamily:m, fontSize:10, padding:'4px 12px', border:'1px solid rgba(0,207,255,0.3)', borderRadius:4, cursor:'pointer', color:'var(--c)', backgroundColor:'transparent' }}>
-            {loading ? '⟳ 加载中…' : loaded ? '↻ 重新加载' : '📈 载入走势图'}
-          </button>
         </div>
       </div>
 
@@ -660,19 +665,19 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
 
           {/* ⑧ 乖離図 120px */}
           <div style={{ ...cvWrap(120), position:'relative' }}>
-            <div style={cvLabel('⑧ 乖离率 · 买入安全边际', '#ff8c35')}/>
+            <div style={cvLabel('⑧ 乖离率 · 买入安全边际', '#ff8c35')}>⑧ 乖离率 · 买入安全边际</div>
             <canvas ref={biasRef} style={{ width:'100%', height:'100%' }}/>
           </div>
 
           {/* B分 100px */}
           <div style={{ ...cvWrap(100), position:'relative' }}>
-            <div style={cvLabel('基准B分 · 八维度综合（含⑧乖离惩罚）', '#00e5c8')}/>
+            <div style={cvLabel('基准B分 · 八维度综合（含⑧乖离惩罚）', '#00e5c8')}>基准B分 · 八维度综合（含⑧乖离惩罚）</div>
             <canvas ref={bsRef} style={{ width:'100%', height:'100%' }}/>
           </div>
 
           {/* RR比 110px */}
           <div style={{ ...cvWrap(110), position:'relative' }}>
-            <div style={cvLabel('盈亏比 R:R · 止损/目标动态比', '#c87aff')}/>
+            <div style={cvLabel('盈亏比 R:R · 止损/目标动态比', '#c87aff')}>盈亏比 R:R · 止损/目标动态比</div>
             <canvas ref={rrRef} style={{ width:'100%', height:'100%' }}/>
           </div>
 

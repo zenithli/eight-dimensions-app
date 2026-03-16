@@ -150,6 +150,8 @@ export interface AnalysisResult {
   analyses:       string[]
   createdAt:      string
   dataFreshness?: string      // 'today' | 'yesterday' | 'unknown'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _debug?:        Record<string, any>  // デバッグ情報
 }
 
 // ─────────────────────────────────────────

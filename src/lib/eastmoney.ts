@@ -33,20 +33,21 @@ export interface RealtimeQuote {
   rise1m:    number
   riseMon:   number
   rise3m:    number   // 近3ヶ月涨幅（90日動能）
-  volRatio:  number
-  volume:    number
-  amount:    number
-  high:      number
-  low:       number
-  open:      number
-  prevClose: number
-  pe:        number
-  pb:        number
+  volRatio:    number
+  volume:      number
+  amount:      number
+  high:        number
+  low:         number
+  open:        number
+  prevClose:   number
+  pe:          number
+  pb:          number
+  turnoverPct: number   // 換手率% (f168/100)
 }
 
 export async function fetchRealtimeQuote(code: string): Promise<RealtimeQuote> {
   const secid = getSecid(code)
-  const fields = 'f43,f44,f45,f46,f47,f48,f50,f57,f58,f60,f116,f117,f127,f128,f129,f130'
+  const fields = 'f43,f44,f45,f46,f47,f48,f50,f57,f58,f60,f116,f117,f127,f128,f129,f130,f168'
   const url =
     `https://push2.eastmoney.com/api/qt/stock/get?fltt=1&invt=2&fields=${fields}` +
     `&secid=${secid}&ut=b2884a393a59ad64002292a3e90d46a5`
@@ -74,15 +75,16 @@ export async function fetchRealtimeQuote(code: string): Promise<RealtimeQuote> {
     rise1m:    d.f129  !== undefined ? +(d.f129  / 100).toFixed(2) : 0,
     riseMon:   d.f130  !== undefined ? +(d.f130  / 100).toFixed(2) : 0,
     rise3m:    d.f133  !== undefined ? +(d.f133  / 100).toFixed(2) : 0,  // 近3ヶ月
-    volRatio:  d.f50   !== undefined ? +(d.f50   / 100).toFixed(2) : 1,
-    volume:    d.f47   ?? 0,
-    amount:    d.f48   ?? 0,
-    high:      d.f44   ? +(d.f44 / 100).toFixed(3) : 0,
-    low:       d.f45   ? +(d.f45 / 100).toFixed(3) : 0,
-    open:      d.f46   ? +(d.f46 / 100).toFixed(3) : 0,
+    volRatio:    d.f50   !== undefined ? +(d.f50   / 100).toFixed(2) : 1,
+    volume:      d.f47   ?? 0,
+    amount:      d.f48   ?? 0,
+    high:        d.f44   ? +(d.f44 / 100).toFixed(3) : 0,
+    low:         d.f45   ? +(d.f45 / 100).toFixed(3) : 0,
+    open:        d.f46   ? +(d.f46 / 100).toFixed(3) : 0,
     prevClose,
-    pe:        d.f116  !== undefined ? +(d.f116  / 100).toFixed(2) : 0,
-    pb:        d.f117  !== undefined ? +(d.f117  / 100).toFixed(2) : 0,
+    pe:          d.f116  !== undefined ? +(d.f116  / 100).toFixed(2) : 0,
+    pb:          d.f117  !== undefined ? +(d.f117  / 100).toFixed(2) : 0,
+    turnoverPct: d.f168  !== undefined ? +(d.f168  / 100).toFixed(2) : 0,
   }
 }
 

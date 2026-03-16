@@ -3,9 +3,19 @@ import { ok, err } from '@/lib/api-response'
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchRealtimeQuote, fetchKlineDaily } from '@/lib/eastmoney'
 
+// ── サーバーサイドキャッシュ（同日・同価格は再利用） ──
+// Vercelサーバーレス: 同インスタンス内のみ有効（短期ブレ防止に有効）
+const _cache = new Map<string, { data: unknown; ts: number }>()
+const CACHE_TTL = 30 * 60 * 1000 // 30分
+
+function cacheKey(code: string, price: number): string {
+  const d = new Date().toLocaleDateString('zh-CN', { timeZone:'Asia/Shanghai' })
+  return `${code}_${d}_${price.toFixed(2)}`
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { code, apiKey } = await req.json()
+    const { code, apiKey, force } = await req.json()
 
     if (!apiKey) return err('请提供 API Key', 401, 'API_KEY_MISSING')
     if (!/^\d{6}$/.test(code)) return err('无效股票代码', 400, 'INVALID_CODE')
@@ -15,11 +25,27 @@ export async function POST(req: NextRequest) {
     try { quote = await fetchRealtimeQuote(code) }
     catch (e) { return err(`行情获取失败: ${e}`, 502, 'QUOTE_FAILED') }
 
-    // ② K線データ取得（MA5〜MA200、MA20乖離）
+    // ── キャッシュチェック（強制刷新でない限り当日同価格は再利用） ──
+    const key = cacheKey(code, quote.price)
+    if (!force) {
+      const hit = _cache.get(key)
+      if (hit && Date.now() - hit.ts < CACHE_TTL) {
+        console.log(`[analyze] cache HIT: ${key}`)
+        return ok({ ...(hit.data as object), _cached: true })
+      }
+    }
+
+
+    // ② K線データ取得（MA5〜MA200、MA20乖離）タイムアウト8秒
     let ma5 = 0, ma10 = 0, ma20 = 0, ma60 = 0, ma120 = 0, ma200 = 0
-    let ma20Bias = 0, turnoverPct = 0
+    let ma20Bias = 0
+    let maFetchLog = 'K線取得スキップ'
     try {
-      const bars = await fetchKlineDaily(code, 220)
+      const klinePromise = fetchKlineDaily(code, 220)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('K線タイムアウト(8s)')), 8000)
+      )
+      const bars = await Promise.race([klinePromise, timeoutPromise])
       if (bars.length >= 5) {
         const closes = bars.map(b => b.close)
         const maCalc = (n: number) => {
@@ -36,15 +62,25 @@ export async function POST(req: NextRequest) {
         if (ma20 > 0) {
           ma20Bias = +((quote.price - ma20) / ma20 * 100).toFixed(2)
         }
+        maFetchLog = `K線${bars.length}本 MA5=${ma5} MA20=${ma20} MA200=${ma200} 乖离=${ma20Bias}%`
+      } else {
+        maFetchLog = `K線不足(${bars.length}本)`
       }
-    } catch { /* K線失敗時はMA未表示 */ }
-
-    // 換手率: amount / 流通市値 の概算（amount万元、volume万株）
-    if (quote.volume > 0 && quote.price > 0) {
-      // volume単位は株、amount単位は元
-      const mvEst = quote.price * quote.volume
-      if (mvEst > 0) turnoverPct = +( quote.amount / mvEst * 100 ).toFixed(2)
+    } catch (e) {
+      maFetchLog = `K線失敗: ${e instanceof Error ? e.message : String(e)}`
+      console.warn('[analyze] MA取得失敗:', maFetchLog)
     }
+
+    // 換手率: V6と同様にf168フィールドから直接取得（APIが0の場合は概算）
+    const turnoverPct = quote.turnoverPct > 0
+      ? quote.turnoverPct
+      : (() => {
+          if (quote.volume > 0 && quote.price > 0) {
+            const mv = quote.price * quote.volume
+            return mv > 0 ? +( quote.amount / mv * 100 ).toFixed(2) : 0
+          }
+          return 0
+        })()
 
     // ③ Claude AI 八维度分析
     const client = new Anthropic({ apiKey })
@@ -90,6 +126,7 @@ MA20乖离率：${ma20Bias}%`
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
+      temperature: 0,  // 決定論的出力（同じ入力→同じ出力に近づける）
       max_tokens: 1200,
       system,
       messages: [{ role: 'user', content: userMsg }],
@@ -205,6 +242,14 @@ MA20乖离率：${ma20Bias}%`
       analyses:  ai.analyses ?? [],
       createdAt: new Date().toISOString(),
       dataFreshness: 'today',
+      // デバッグ情報（LOGパネル用）
+      _debug: {
+        maFetchLog,
+        quotePrice: quote.price,
+        quoteVolume: quote.volume,
+        quoteAmount: quote.amount,
+        quoteTurnoverPct: quote.turnoverPct,
+      },
     }
 
     // DB保存（失敗しても無視）
@@ -224,6 +269,10 @@ MA20乖离率：${ma20Bias}%`
         }}).catch(() => {})
       } catch (dbErr) { console.warn('[analyze] DB保存スキップ:', dbErr) }
     }
+
+    // キャッシュ保存
+    _cache.set(key, { data: resultData, ts: Date.now() })
+    console.log(`[analyze] cache SET: ${key}`)
 
     return ok(resultData)
   } catch (e: unknown) {
