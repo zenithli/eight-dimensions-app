@@ -371,7 +371,13 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     const gw = W-PAD.l-PAD.r, gh = H-PAD.t-PAD.b
     const n = data.length
     ctx.fillStyle = dark?'#04070f':'#f0f4f8'; ctx.fillRect(0,0,W,H)
-    const yS=(v:number)=>PAD.t+gh-(Math.max(0,Math.min(5.5,v))/5.5)*gh
+    // 動的Y軸: データ範囲+余白。閾値3.5が必ず表示されるよう下限調整
+    const vals = data.map(d=>d.bScoreSm||d.bScore||1)
+    const dMin = Math.min(...vals), dMax = Math.max(...vals)
+    const yLo  = Math.max(0, Math.min(dMin - 0.4, 2.8))   // 下限: データ最低-0.4 かつ最高2.8
+    const yHi  = Math.max(5.5, dMax + 0.3)                 // 上限: 最低5.5
+    const yRange = yHi - yLo
+    const yS=(v:number)=>PAD.t+gh-((Math.max(yLo,Math.min(yHi,v))-yLo)/yRange)*gh
     const xS=(i:number)=>PAD.l+i*(gw/(n-1))
     // 閾値背景
     ctx.fillStyle=dark?'rgba(0,232,122,0.06)':'rgba(0,232,122,0.05)'
