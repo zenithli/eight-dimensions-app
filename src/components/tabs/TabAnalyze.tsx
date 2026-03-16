@@ -118,6 +118,27 @@ export function TabAnalyze() {
         `B分=${data.totalScore} 信号=${data.signal} 止损=¥${data.stopLoss}`,
         'analyze'
       )
+      // localStorage にも保存（DB未接続時のフォールバック用）
+      try {
+        const LS_KEY = 'history_v7'
+        const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]')
+        const newEntry = {
+          id:          Date.now(),
+          code:        data.code,
+          name:        data.name,
+          price:       data.price,
+          changePct:   data.changePct,
+          totalScore:  data.totalScore,
+          signal:      data.signal,
+          stopLoss:    data.stopLoss,
+          targetPrice: data.targetPrice,
+          riskRatio:   data.riskRatio,
+          summary:     data.summary,
+          scoresJson:  JSON.stringify(data.scores ?? []),
+          createdAt:   new Date().toISOString(),
+        }
+        localStorage.setItem(LS_KEY, JSON.stringify([newEntry, ...existing].slice(0, 100)))
+      } catch { /* localStorage保存失敗は無視 */ }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '分析失败，请重试'
       setError(msg)
