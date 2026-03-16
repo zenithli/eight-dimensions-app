@@ -162,7 +162,7 @@ export function TabTactic() {
           backgroundColor:'var(--bg3)', border:'1px solid var(--bd)',
           borderRadius:8, padding:'14px',
         }}>
-          <div style={{ fontWeight:700, color:'#fff', fontSize:13, marginBottom:6 }}>
+          <div style={{ fontWeight:700, color:'var(--t)', fontSize:13, marginBottom:6 }}>
             {SCHEMES[activeScheme].label}
           </div>
           <div style={{ fontSize:12, color:'var(--t2)', lineHeight:1.9, marginBottom:8 }}>
@@ -191,7 +191,7 @@ function SectionTitle({ icon, label, sub }: { icon:string; label:string; sub:str
   return (
     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
       <span style={{ fontSize:16 }}>{icon}</span>
-      <span style={{ fontWeight:700, color:'#fff', fontSize:13 }}>{label}</span>
+      <span style={{ fontWeight:700, color:'var(--t)', fontSize:13 }}>{label}</span>
       <span style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)' }}>{sub}</span>
     </div>
   )
@@ -211,7 +211,7 @@ function StockCard({ code, name, role, cost, note, color }: {
       <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color: color || 'var(--t3)', marginBottom:3 }}>
         {code}
       </div>
-      <div style={{ fontWeight:700, color:'#fff', fontSize:14, marginBottom:4 }}>{name}</div>
+      <div style={{ fontWeight:700, color:'var(--t)', fontSize:14, marginBottom:4 }}>{name}</div>
       <div style={{
         fontFamily:'IBM Plex Mono', fontSize:9, display:'inline-block',
         padding:'1px 6px', border:'1px solid var(--bd)', borderRadius:3,

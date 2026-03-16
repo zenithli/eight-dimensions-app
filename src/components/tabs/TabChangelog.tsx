@@ -52,7 +52,7 @@ export function TabChangelog() {
         }}>
           {/* ヘッダー */}
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, flexWrap:'wrap' }}>
-            <span style={{ fontFamily:'IBM Plex Mono', fontSize:15, fontWeight:700, color:'#fff' }}>
+            <span style={{ fontFamily:'IBM Plex Mono', fontSize:15, fontWeight:700, color:'var(--t)' }}>
               {v.ver}
             </span>
             <span style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t3)' }}>

@@ -44,11 +44,11 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
             <div>
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
-                <h2 style={{ color:'#fff', fontWeight:700, fontSize:22 }}>{result.name}</h2>
+                <h2 style={{ color:'var(--t)', fontWeight:700, fontSize:22 }}>{result.name}</h2>
                 <span style={{ color:'var(--t3)', fontFamily:'IBM Plex Mono', fontSize:12 }}>{result.code}</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <span style={{ fontFamily:'IBM Plex Mono', color:'#fff', fontSize:18, fontWeight:700 }}>
+                <span style={{ fontFamily:'IBM Plex Mono', color:'var(--t)', fontSize:18, fontWeight:700 }}>
                   ¥{result.price.toFixed(2)}
                 </span>
                 <span style={{ fontFamily:'IBM Plex Mono', fontSize:13, fontWeight:700, color:pnlColor }}>
