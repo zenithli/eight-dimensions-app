@@ -75,47 +75,56 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     })
   }
 
-  // ── K線データから結果計算（V6のloadTrendと同等） ──
+  // ── K線データから結果計算 ── V6コード完全移植版
   const calcResults = useCallback((bars: KBar[]): TrendResult[] => {
-    const allCloses = bars.map(b => b.close)
-    const avgVol    = bars.reduce((s, b) => s + b.volume, 0) / bars.length
+    // V6と同一: stockK全体 + 最後の90本をklines対象にする
+    const stockK = bars
+    const klines = stockK.slice(-90)
+    const allCloses = stockK.map(k => k.close)
+    const allVols   = stockK.map(k => k.volume)
+    const n = stockK.length
 
-    // MA計算
-    const maCalc = (closes: number[], i: number, n: number) => {
-      if (i < n - 1) return 0
-      return closes.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n
-    }
+    const results: TrendResult[] = []
 
-    const res: TrendResult[] = bars.map((k, ai) => {
-      const closes = allCloses.slice(0, ai + 1)
-      const ma5  = maCalc(allCloses, ai, 5)
-      const ma20 = maCalc(allCloses, ai, 20)
-      const ma60 = maCalc(allCloses, ai, 60)
+    klines.forEach((k, idx) => {
+      const ai = n - klines.length + idx
+      // V6と同一のMA計算
+      const ma = (p: number) => {
+        if (ai < p - 1) return null
+        const sl = allCloses.slice(ai - p + 1, ai + 1)
+        return sl.reduce((a, b) => a + b, 0) / p
+      }
+      const ma5 = ma(5), ma20 = ma(20), ma60 = ma(60)
 
-      // ① 趋势共振
-      let trend = 3
-      if (ma5 > 0 && ma20 > 0 && ma60 > 0) {
-        let s = 0
-        if (k.close > ma5)  s++
-        if (k.close > ma20) s++
-        if (k.close > ma60) s++
-        if (ma5 > ma20)     s++
-        if (ma20 > ma60)    s++
-        trend = s >= 5 ? 5 : s >= 4 ? 4 : s >= 3 ? 3 : s >= 2 ? 2 : 1
+      // ① 趋势強度 ── V6完全一致（4項目、0〜4点→1〜5スコア）
+      let trend = 1
+      if (ma5 && ma20 && ma60) {
+        let sc = 0
+        if (ma5 > ma20)    sc++
+        if (ma20 > ma60)   sc++
+        if (k.close > ma5) sc++
+        if (k.close > ma20) sc++
+        trend = sc === 0 ? 1 : sc === 1 ? 2 : sc === 2 ? 3 : sc === 3 ? 4 : 5
       }
 
-      // ② 量価
+      // ② 量価健康度 ── V6完全一致（直近5本の動的avgVol）
       let vp = 3
-      const up = k.changePct >= 0
-      const big = k.volume > avgVol * 1.15
-      const sml = k.volume < avgVol * 0.85
-      if (up && big) vp = 5
-      else if (!up && sml) vp = 4
-      else if (up && sml) vp = 3
-      else if (!up && big) vp = 1
-      else vp = 3
+      if (ai > 0) {
+        const pc = allCloses[ai - 1]
+        const up = k.close > pc
+        const baseVols = allVols.slice(Math.max(0, ai - 5), ai)
+        const avgVol = baseVols.length
+          ? baseVols.reduce((a, b) => a + b, 0) / baseVols.length
+          : allVols[ai - 1]
+        const big = k.volume > avgVol * 1.15, sml = k.volume < avgVol * 0.85
+        if (up && big) vp = 5
+        else if (!up && sml) vp = 4
+        else if (up && sml) vp = 3
+        else if (!up && big) vp = 1
+        else vp = 3
+      }
 
-      // ③ RS（沪指がないので個別で代用）
+      // ③ 相対強弱RS ── V6完全一致（個別changePctのみ、沪指なし版）
       let rs = 3
       rs = k.changePct > 1.5 ? 5 : k.changePct > 0.3 ? 4 : k.changePct > -0.3 ? 3 : k.changePct > -1.5 ? 2 : 1
 
@@ -123,54 +132,49 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
 
       // ⑧ 乖離率
       let bias20 = 0
-      if (ma20 > 0) bias20 = +((k.close - ma20) / ma20 * 100).toFixed(2)
+      if (ma20 && ma20 > 0) bias20 = +((k.close - ma20) / ma20 * 100).toFixed(2)
 
       // 近20日涨幅
       let rise20 = 0
       if (ai >= 20 && allCloses[ai - 20] > 0)
         rise20 = +((k.close - allCloses[ai - 20]) / allCloses[ai - 20] * 100).toFixed(2)
 
-      // B分
+      // B分（V6完全一致）
       let rawB = (trend * 2 + vp + rs) / 4
-      if (rise20 > 35)              rawB = 0
-      else if (rise20 > 30)         rawB -= 0.28
-      else if (rise20 > 25)         rawB -= 0.18
-      else if (rise20 > 20)         rawB -= 0.08
+      if (rise20 > 35)            rawB = 0
+      else if (rise20 > 30)       rawB -= 0.28
+      else if (rise20 > 25)       rawB -= 0.18
+      else if (rise20 > 20)       rawB -= 0.08
       else if (rise20 <= 10 && rise20 > 0) rawB += 0.05
       const bScore = +Math.max(0, Math.min(5.5, rawB)).toFixed(2)
 
-      return {
+      results.push({
         date: k.date, label: k.date.slice(5),
         close: k.close, changePct: k.changePct,
         open: k.open, high: k.high, low: k.low,
         trend, vp, rs, comp, bias20, rise20, bScore,
-        ma5, ma20, ma60,
+        ma5: ma5 || 0, ma20: ma20 || 0, ma60: ma60 || 0,
         trendSm:0, vpSm:0, rsSm:0, compSmooth:0, bias20Sm:0, bScoreSm:0,
         stop:0, target:0, rr:0, stopAdj:0, rrAdj:0, stopPct:0,
-      }
+      })
     })
 
-    // 平滑化
-    const tSm = rollingAvg(res.map(r => r.trend), 5)
-    const vSm = rollingAvg(res.map(r => r.vp), 5)
-    const rSm = rollingAvg(res.map(r => r.rs), 10)
-    const cSm = rollingAvg(res.map(r => r.comp), 5)
-    const bSm = rollingAvg(res.map(r => r.bias20), 5)
-    const bsSm= rollingAvg(res.map(r => r.bScore), 3)
+    // 平滑化（V6完全一致）
+    const tSm  = rollingAvg(results.map(r => r.trend),  5)
+    const vSm  = rollingAvg(results.map(r => r.vp),     5)
+    const rSm  = rollingAvg(results.map(r => r.rs),    10)
+    const cSm  = rollingAvg(results.map(r => r.comp),   5)
+    const bSm  = rollingAvg(results.map(r => r.bias20), 5)
+    const bsSm = rollingAvg(results.map(r => r.bScore), 3)
 
-    res.forEach((r, i) => {
-      r.trendSm = tSm[i]; r.vpSm = vSm[i]; r.rsSm = rSm[i]
-      r.compSmooth = cSm[i]; r.bias20Sm = bSm[i]; r.bScoreSm = bsSm[i]
-    })
-
-    // 止損・目標・RR逐日計算
-    res.forEach((r, i) => {
+    // ── 逐日止損・目標・RR計算（V6完全一致）──
+    results.forEach((r, i) => {
       const c = r.close
-      const lo10 = Math.min(...res.slice(Math.max(0, i-9), i+1).map(x => x.low || x.close))
+      const lo10 = Math.min(...results.slice(Math.max(0,i-9), i+1).map(x => x.low || x.close))
       const stopSupport = lo10 * 0.99
       const stopPct2    = c * 0.92
-      const stop = Math.max(stopSupport, stopPct2)
-      const hi30 = Math.max(...res.slice(Math.max(0, i-29), i+1).map(x => x.high || x.close))
+      const stop   = Math.max(stopSupport, stopPct2)
+      const hi30   = Math.max(...results.slice(Math.max(0,i-29), i+1).map(x => x.high || x.close))
       const target = Math.max(hi30 * 1.03, c * 1.15)
       const risk   = Math.abs(c - stop)
       const reward = Math.abs(target - c)
@@ -180,12 +184,22 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
       else if (r.rise20 > 25) stopAdj = c * 0.94
       const riskAdj = Math.abs(c - stopAdj)
       const rrAdj   = riskAdj > 0 ? +(reward / riskAdj).toFixed(2) : 0
-      r.stop = +stop.toFixed(3); r.target = +target.toFixed(3)
-      r.rr = rr; r.stopAdj = +stopAdj.toFixed(3); r.rrAdj = rrAdj
-      r.stopPct = +((c - stop) / c * 100).toFixed(2)
+      r.stop   = +stop.toFixed(3);    r.target  = +target.toFixed(3)
+      r.rr     = rr;                  r.stopAdj = +stopAdj.toFixed(3)
+      r.rrAdj  = rrAdj;               r.stopPct = +((c - stop) / c * 100).toFixed(2)
     })
 
-    return res
+    // 平滑値を代入（V6の results.forEach と同一順序）
+    results.forEach((r, i) => {
+      r.trendSm    = tSm[i]
+      r.vpSm       = vSm[i]
+      r.rsSm       = rSm[i]
+      r.compSmooth = cSm[i]  // ← V7で抜けていたフィールド
+      r.bias20Sm   = bSm[i]
+      r.bScoreSm   = bsSm[i]
+    })
+
+    return results
   }, [])
 
   // ══ 描画関数群（V6の関数を1:1移植）══
