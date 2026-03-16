@@ -1,4 +1,5 @@
 'use client'
+import { TrendPanel } from './TrendPanel'
 
 import { useState } from 'react'
 import type { AnalysisResult } from '@/types/domain'
@@ -116,6 +117,14 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
       </div>
 
       {/* ── AI総合コメント ── */}
+      {/* ── 走勢図パネル ── */}
+      <TrendPanel
+        code={result.code}
+        name={result.name}
+        stopLoss={result.stopLoss}
+        targetPrice={result.targetPrice}
+      />
+
       {result.summary && (
         <div style={{
           backgroundColor:'var(--bg2)', border:'1px solid var(--bd)', borderRadius:12, padding:20,

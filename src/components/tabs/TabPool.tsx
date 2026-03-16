@@ -114,7 +114,7 @@ export function TabPool() {
         const q = map.get(s.code) as Record<string,number> | undefined
         if (!q) return s
         return { ...s, price:q.price, chg:q.changePct, d3:q.rise3d??0,
-                 d6:q.rise6d, m1:q.rise1m, mon:q.riseMon, d90:q.rise3m??0, volr:q.volRatio, dataMode:'realtime' }
+                 d6:q.rise6d, m1:q.rise1m, mon:q.riseMon, d90:(q.rise3m !== 0 ? q.rise3m : undefined), volr:q.volRatio, dataMode:'realtime' }
       })
       save(updated)
       setStatusOk(true)

@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Build: 202603162356
 const nextConfig = {
   // Prisma Client を Server Components / Route Handler で使う場合に必要
   experimental: {
