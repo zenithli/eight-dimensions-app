@@ -62,10 +62,10 @@ const S = {
     opacity: disabled ? 0.5 : 1, transition:'all .15s', whiteSpace:'nowrap' as const,
   }),
   refreshBtn: {
-    fontFamily:'IBM Plex Mono', fontSize:10, padding:'9px 14px',
-    border:'1px solid rgba(247,201,72,0.4)', color:'var(--y)',
-    backgroundColor:'transparent', borderRadius:6, cursor:'pointer',
-    whiteSpace:'nowrap' as const,
+    fontFamily:'IBM Plex Mono', fontSize:11, padding:'0 14px', height:44,
+    border:'1px solid var(--y)', color:'var(--y)',   // V6: border:1px solid var(--y)
+    backgroundColor:'transparent', cursor:'pointer',
+    whiteSpace:'nowrap' as const, flexShrink:0,
   },
   quickRow: { display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' as const, marginTop:6 },
   quickLabel: { color:'var(--t3)', fontFamily:'IBM Plex Mono', fontSize:9, letterSpacing:'0.1em' },
@@ -188,8 +188,8 @@ function RecentBar({ onSelect, disabled }: { onSelect:(code:string)=>void; disab
 }
 
 // ── LOGパネル（V6仕様）──
-function LogPanel({ logs, onClear }: { logs: LogEntry[]; onClear: ()=>void }) {
-  const [show, setShow] = useState(true)
+function LogPanel({ logs, onClear, onClose }: { logs: LogEntry[]; onClear: ()=>void; onClose?: ()=>void }) {
+  const [show, setShow] = useState(false)  // V6: 初期非表示、ログ件数バッジクリックで開く
   const [filter, setFilter] = useState<LogLevel|'all'>('all')
   const [expanded, setExpanded] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
@@ -242,7 +242,7 @@ function LogPanel({ logs, onClear }: { logs: LogEntry[]; onClear: ()=>void }) {
           <button onClick={onClear} style={{ fontSize:9, color:'var(--t3)', cursor:'pointer', background:'none', border:'1px solid var(--bd)', padding:'2px 7px', borderRadius:3 }}>
             清空
           </button>
-          <button onClick={() => setShow(false)} style={{ fontSize:11, color:'var(--t3)', cursor:'pointer', background:'none', border:'none', padding:'0 4px' }}>✕</button>
+          <button onClick={() => { setShow(false); onClose?.() }} style={{ fontSize:11, color:'var(--t3)', cursor:'pointer', background:'none', border:'none', padding:'0 4px' }}>✕</button>
         </div>
       </div>
 
@@ -282,7 +282,8 @@ export function TabAnalyze() {
   const [result, setResult]   = useState<AnalysisResult | null>(null)
   const [error, setError]     = useState('')
   const [progress, setProgress] = useState('')
-  const [logs, setLogs]       = useState<LogEntry[]>([])
+  const [logs, setLogs]         = useState<LogEntry[]>([])
+  const [showLog, setShowLog]   = useState(false)  // V6: 初期非表示
   const startTimeRef = useRef<number>(0)
 
   const addLog = useCallback((msg: string, level: LogLevel = 'info', detail = '', tag = 'analyze') => {
@@ -299,7 +300,9 @@ export function TabAnalyze() {
     if (!apiKey) { setError('请先在顶部输入并保存 Anthropic API Key'); return }
 
     setLoading(true); setError(''); setResult(null)
+    setLogs([])  // 新規分析時にログリセット
     startTimeRef.current = Date.now()
+    // V6: LOGパネルはバッジクリックでのみ開く（自動展開しない）
     addLog(`开始分析 ${c}`, 'step', `code=${c}`, 'analyze')
     setProgress('① 获取实时行情 + K线均线…')
 
@@ -381,11 +384,10 @@ export function TabAnalyze() {
           <button onClick={() => run()} disabled={loading} style={S.btn(loading)}>
             {loading ? '⟳ 分析中…' : '🔍 AI 分析'}
           </button>
-          {result && (
-            <button onClick={() => { setResult(null); run(undefined, true) }} disabled={loading} style={S.refreshBtn}>
-              ↺ 强制刷新
-            </button>
-          )}
+          {/* V6と同様: 强制刷新は常に表示 */}
+          <button onClick={() => { setResult(null); run(undefined, true) }} disabled={loading} style={S.refreshBtn}>
+            ↺ 强制刷新
+          </button>
         </div>
         {/* V6のqrow: 持仓：現持仓 + 新进攻矛 */}
         <div style={S.quickRow}>
@@ -454,7 +456,33 @@ export function TabAnalyze() {
       {result && !loading && <AnalysisResultCard result={result}/>}
 
       {/* LOGパネル（常時表示） */}
-      <LogPanel logs={logs} onClear={() => setLogs([])}/>
+      {/* V6: • LOG N件 バッジ（クリックでパネル開閉） */}
+      {logs.length > 0 && (
+        <div
+          onClick={() => setShowLog(v => !v)}
+          style={{
+            position:'fixed', bottom: showLog ? 'calc(180px + 8px)' : 8, right:80,
+            zIndex:9998, cursor:'pointer',
+            backgroundColor:'var(--bg3)', border:'1px solid var(--c)',
+            borderRadius:20, padding:'4px 12px',
+            fontFamily:'IBM Plex Mono,monospace', fontSize:11,
+            color:'var(--c)', display:'flex', alignItems:'center', gap:6,
+            boxShadow:'0 2px 10px rgba(0,0,0,0.3)',
+            transition:'bottom 0.2s',
+          }}
+        >
+          <span style={{ color:'var(--c)' }}>•</span>
+          <span style={{ fontWeight:700 }}>LOG</span>
+          <span style={{ color:'var(--t2)' }}>{logs.length}件</span>
+          {logs.filter(l => l.level === 'error').length > 0 && (
+            <span style={{ color:'#ff2d55', fontSize:9, padding:'1px 4px',
+              border:'1px solid #ff2d55', borderRadius:3 }}>
+              ✕{logs.filter(l => l.level === 'error').length}
+            </span>
+          )}
+        </div>
+      )}
+      {showLog && <LogPanel logs={logs} onClear={() => setLogs([])} onClose={() => setShowLog(false)}/>}
     </div>
   )
 }
