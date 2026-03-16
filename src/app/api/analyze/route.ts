@@ -102,10 +102,12 @@ export async function POST(req: NextRequest) {
     }
 
     // B分を計算（⑧次元はサーバー側で計算）
-    const scores: number[] = aiResult.scores ?? [3, 3, 3, 3, 3, 3, 3]
-    const trend  = scores[0] ?? 3
-    const vol    = scores[1] ?? 3
-    const alpha  = scores[2] ?? 3
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ai = aiResult as any
+    const scores: number[] = Array.isArray(ai.scores) ? ai.scores : [3, 3, 3, 3, 3, 3, 3]
+    const trend  = typeof scores[0] === 'number' ? scores[0] : 3
+    const vol    = typeof scores[1] === 'number' ? scores[1] : 3
+    const alpha  = typeof scores[2] === 'number' ? scores[2] : 3
     const baseB  = parseFloat(((trend * 2 + vol + alpha) / 4).toFixed(2))
 
     // ⑧乖離（m1推算、MA20計算は別エンドポイント）
@@ -123,8 +125,8 @@ export async function POST(req: NextRequest) {
       totalScore >= 4.0 ? '积极关注' :
       totalScore >= 3.5 ? '观望' : '规避'
 
-    const riskReward = aiResult.stopLoss && aiResult.targetPrice
-      ? `1:${((aiResult.targetPrice - quote.price) / (quote.price - aiResult.stopLoss)).toFixed(1)}`
+    const riskReward = ai.stopLoss && ai.targetPrice
+      ? `1:${((ai.targetPrice - quote.price) / (quote.price - ai.stopLoss)).toFixed(1)}`
       : '—'
 
     const resultData = {
@@ -134,17 +136,17 @@ export async function POST(req: NextRequest) {
       changePct:   quote.changePct,
       totalScore,
       signal,
-      stopLoss:    aiResult.stopLoss    ?? parseFloat((quote.price * 0.92).toFixed(2)),
-      targetPrice: aiResult.targetPrice ?? parseFloat((quote.price * 1.15).toFixed(2)),
+      stopLoss:    ai.stopLoss    ?? parseFloat((quote.price * 0.92).toFixed(2)),
+      targetPrice: ai.targetPrice ?? parseFloat((quote.price * 1.15).toFixed(2)),
       riskRatio:   riskReward,
-      summary:     aiResult.summary ?? '',
+      summary:     ai.summary ?? '',
       scores:      scores.map((s: number, i: number) => ({
         dim: i + 1,
         name: ['趋势共振','量能加速','Alpha超额','威科夫阶段','板块生态','资金流向','基本面锚'][i],
         score: s,
-        analysis: aiResult.analyses?.[i] ?? '',
+        analysis: ai.analyses?.[i] ?? '',
       })),
-      analyses:  aiResult.analyses ?? [],
+      analyses:  ai.analyses ?? [],
       createdAt: new Date().toISOString(),
     }
 
