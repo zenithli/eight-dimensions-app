@@ -165,7 +165,7 @@ function PortCard({ item }: { item: PortfolioItem }) {
       borderRadius:8, padding:'12px',
       transition:'border-color .15s',
     }}>
-      <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t2)', marginBottom:3 }}>
+      <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--c)', marginBottom:3, letterSpacing:'0.05em' }}>
         {item.code}
       </div>
       <div style={{ fontWeight:700, color:'#fff', fontSize:14, marginBottom:4 }}>

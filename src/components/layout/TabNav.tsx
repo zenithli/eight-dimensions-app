@@ -54,7 +54,7 @@ export function TabNav({ activeTab, onChange }: TabNavProps) {
               display: 'inline-flex', alignItems: 'center', gap: 5,
               fontFamily: 'IBM Plex Mono', fontSize: 11,
               padding: '10px 14px',
-              color: active ? 'var(--c)' : 'var(--t2)',
+              color: active ? 'var(--c)' : 'var(--t)',
               borderBottom: `2px solid ${active ? 'var(--c)' : 'transparent'}`,
               borderTop: 'none', borderLeft: 'none', borderRight: 'none',
               marginBottom: -1,

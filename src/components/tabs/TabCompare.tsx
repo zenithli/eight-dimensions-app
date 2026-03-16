@@ -88,7 +88,7 @@ export function TabCompare() {
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'flex-end', marginBottom:14 }}>
           {codes.map((code, i) => (
             <div key={i} style={{ position:'relative' }}>
-              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t2)', marginBottom:3 }}>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t)', marginBottom:3 }}>
                 股票 {i+1}
               </div>
               <div style={{ display:'flex', gap:4 }}>
@@ -119,7 +119,7 @@ export function TabCompare() {
             <button onClick={addCode} disabled={running} style={{
               fontFamily:'IBM Plex Mono', fontSize:10, padding:'7px 12px',
               border:'1px dashed var(--bd)', borderRadius:6,
-              color:'var(--t2)', backgroundColor:'transparent', cursor:'pointer',
+              color:'var(--t)', backgroundColor:'transparent', cursor:'pointer',
               alignSelf:'flex-end',
             }}>
               + 添加
@@ -151,7 +151,7 @@ export function TabCompare() {
           <div style={{ textAlign:'center', padding:'40px 0' }}>
             <div style={{ fontSize:28, marginBottom:12 }}>⚖️</div>
             <div style={{ fontFamily:'IBM Plex Mono', fontSize:11, color:'var(--c)' }}>{progress}</div>
-            <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t2)', marginTop:6 }}>
+            <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t)', marginTop:6 }}>
               每只股票约15–30秒，请耐心等待
             </div>
           </div>
@@ -161,10 +161,10 @@ export function TabCompare() {
         {!running && results.length === 0 && (
           <div style={{ textAlign:'center', padding:'40px 0' }}>
             <div style={{ fontSize:28, marginBottom:10 }}>⚖️</div>
-            <div style={{ color:'var(--t2)', fontFamily:'IBM Plex Mono', fontSize:12 }}>
+            <div style={{ color:'var(--t)', fontFamily:'IBM Plex Mono', fontSize:12 }}>
               输入2–5只股票代码，AI同时分析并横向对比
             </div>
-            <div style={{ color:'var(--t2)', fontFamily:'IBM Plex Mono', fontSize:10, marginTop:6, opacity:0.7 }}>
+            <div style={{ color:'var(--t)', fontFamily:'IBM Plex Mono', fontSize:10, marginTop:6, opacity:0.7 }}>
               对比维度：八维度B分 / 止损 / 目标价 / 盈亏比
             </div>
           </div>
@@ -195,7 +195,7 @@ export function TabCompare() {
                         No.1 推荐
                       </div>
                     )}
-                    <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t2)', marginBottom:2 }}>
+                    <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t)', marginBottom:2 }}>
                       #{rank+1} · {r.code}
                     </div>
                     <div style={{ fontWeight:700, color:'#fff', fontSize:14, marginBottom:6 }}>{r.name}</div>
@@ -221,9 +221,9 @@ export function TabCompare() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
                 <thead>
                   <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-                    <th style={{ textAlign:'left', fontSize:9, color:'var(--t2)', paddingBottom:8, paddingRight:12, fontWeight:400 }}>维度</th>
+                    <th style={{ textAlign:'left', fontSize:9, color:'var(--t)', paddingBottom:8, paddingRight:12, fontWeight:400 }}>维度</th>
                     {results.map(r => (
-                      <th key={r.code} style={{ textAlign:'center', fontSize:9, color:'var(--t2)', paddingBottom:8, paddingRight:8, fontWeight:400 }}>
+                      <th key={r.code} style={{ textAlign:'center', fontSize:9, color:'var(--t)', paddingBottom:8, paddingRight:8, fontWeight:400 }}>
                         {r.name}
                       </th>
                     ))}

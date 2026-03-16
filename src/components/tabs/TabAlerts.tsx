@@ -266,7 +266,7 @@ function AlertTable({
           <tr key={a.id} style={{ borderBottom:'1px solid rgba(56,200,255,0.04)' }}>
             <td style={{ padding:'8px 12px 8px 0' }}>
               <div style={{ fontWeight:700, color:'#fff' }}>{a.name}</div>
-              <div style={{ fontSize:9, color:'var(--t3)' }}>{a.code}</div>
+              <div style={{ fontSize:9, color:'var(--c)', fontFamily:'IBM Plex Mono' }}>{a.code}</div>
             </td>
             <td style={{ padding:'8px 12px 8px 0' }}>
               <span style={{

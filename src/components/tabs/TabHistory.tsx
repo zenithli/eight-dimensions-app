@@ -301,7 +301,7 @@ function HistoryRow({
         {/* 銘柄 */}
         <td style={{ padding:'9px 10px 9px 0' }}>
           <div style={{ fontWeight:700, color:'var(--c)' }}>{entry.name}</div>
-          <div style={{ fontSize:9, color:'var(--t3)' }}>{entry.code}</div>
+          <div style={{ fontSize:9, color:'var(--c)', fontFamily:'IBM Plex Mono' }}>{entry.code}</div>
         </td>
         {/* 価格 */}
         <td style={{ padding:'9px 10px 9px 0' }}>
