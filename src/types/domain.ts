@@ -152,6 +152,8 @@ export interface AnalysisResult {
   dataFreshness?: string      // 'today' | 'yesterday' | 'unknown'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _debug?:        Record<string, any>  // デバッグ情報
+  _cached?:       boolean              // キャッシュから取得
+  _cachedAt?:     string               // キャッシュ保存時刻
 }
 
 // ─────────────────────────────────────────
