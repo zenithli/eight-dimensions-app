@@ -9,11 +9,19 @@ import { Card } from '@/components/shared/Card'
 import { AnalysisResultCard } from '@/components/shared/AnalysisResultCard'
 import type { AnalysisResult } from '@/types/domain'
 
-const QUICK = [
+// V6と同一の持仓・攻矛分類（V6: qrow の 持仓：現持仓 + 新进攻矛）
+const PORTFOLIO = [
   { code: '000815', name: '美利云'   },
+  { code: '159326', name: '电网ETF'  },
+  { code: '000977', name: '浪潮信息' },
+  { code: '002371', name: '北方华创' },
+  { code: '300308', name: '中际旭创' },
+]
+const ATTACK = [
   { code: '601225', name: '陕西煤业' },
   { code: '601101', name: '昊华能源' },
-  { code: '159326', name: '电网ETF'  },
+  { code: '600598', name: '北大荒'   },
+  { code: '000885', name: '城发环境' },
 ]
 
 // ── LOGシステム ──
@@ -84,39 +92,97 @@ const S = {
 }
 
 // ── RECENTバー ──
+// V6のrenderHist()を完全移植
+// hitem: 名前 + スコア/35 + 信号（色付き）+ 価格 + 涨跌幅
+interface HistItem {
+  code: string; name: string
+  totalScore: number; signal: string
+  price: number; changePct: number
+  stopLoss?: number; targetPrice?: number; riskRatio?: string
+}
+
 function RecentBar({ onSelect, disabled }: { onSelect:(code:string)=>void; disabled:boolean }) {
-  const [recent, setRecent] = React.useState<Array<{code:string;name:string;B:number}>>([])
+  const [recent, setRecent] = React.useState<HistItem[]>([])
   React.useEffect(() => {
     try {
       const h = JSON.parse(localStorage.getItem('history_v7')||'[]')
-      const seen = new Set<string>(); const items: typeof recent = []
+      const seen = new Set<string>()
+      const items: HistItem[] = []
       for (const e of h) {
-        if (!seen.has(e.code) && items.length < 5) {
+        if (!seen.has(e.code) && items.length < 8) {
           seen.add(e.code)
-          items.push({ code:e.code, name:e.name, B:e.totalScore||0 })
+          items.push({
+            code: e.code, name: e.name,
+            totalScore: e.totalScore || 0,
+            signal: e.signal || '观察',
+            price: e.price || 0,
+            changePct: e.changePct || 0,
+            stopLoss: e.stopLoss, targetPrice: e.targetPrice,
+            riskRatio: e.riskRatio,
+          })
         }
       }
       setRecent(items)
     } catch {}
   }, [])
+
   if (!recent.length) return null
+
+  // V6のsignal色マップ
+  const sigColor: Record<string, string> = {
+    '强力买入': 'var(--g)', '建议买入': 'var(--g)',
+    '买入': 'var(--g)', '持有': 'var(--c)',
+    '观察': 'var(--y)', '观望': 'var(--y)',
+    '减仓': 'var(--o)', '规避': 'var(--r)', '清仓': 'var(--r)',
+  }
+  // V6のscoreCol: スコア色
+  const scoreCol = (s: number) =>
+    s >= 28 ? 'var(--g)' : s >= 22 ? 'var(--c)' : s >= 16 ? 'var(--y)' : 'var(--r)'
+
+  const M = 'IBM Plex Mono,monospace'
+
   return (
-    <div style={{ marginBottom:10, padding:'7px 12px',
+    <div style={{
+      marginBottom:10, padding:'7px 12px',
       backgroundColor:'var(--bg3)', border:'1px solid var(--bd)',
-      borderRadius:6, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-      <span style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.1em' }}>
+      borderRadius:6,
+    }}>
+      <div style={{ fontFamily:M, fontSize:9, color:'var(--t3)', letterSpacing:'0.1em', marginBottom:7 }}>
         RECENT · 最近分析
-      </span>
-      {recent.map(r => (
-        <button key={r.code} disabled={disabled} onClick={() => onSelect(r.code)}
-          style={{ fontFamily:'IBM Plex Mono', fontSize:10, padding:'3px 10px',
-            border:'1px solid var(--bd2)', borderRadius:4,
-            color:'var(--t2)', backgroundColor:'transparent',
-            cursor: disabled?'not-allowed':'pointer', opacity: disabled?0.4:1 }}>
-          {r.name}
-          <span style={{ color:'var(--c)', marginLeft:5 }}>B{r.B.toFixed(2)}</span>
-        </button>
-      ))}
+      </div>
+      {/* V6の.hlist: flex wrap */}
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+        {recent.map(r => (
+          <div key={r.code + r.totalScore}
+            onClick={() => !disabled && onSelect(r.code)}
+            style={{
+              display:'flex', alignItems:'center', gap:8,
+              backgroundColor:'var(--bg3)', border:'1px solid var(--bd)',
+              padding:'6px 12px', cursor: disabled ? 'not-allowed' : 'pointer',
+              transition:'all .15s', fontSize:11, borderRadius:4,
+              opacity: disabled ? 0.4 : 1,
+            }}
+            onMouseEnter={e => { if (!disabled) (e.currentTarget as HTMLElement).style.borderColor = 'var(--c)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--bd)' }}
+          >
+            {/* V6: 名前 + スコア/35 + 信号 + 価格 + 涨跌幅 */}
+            <span style={{ fontWeight:700, color:'var(--t)' }}>{r.name}</span>
+            <span style={{ fontFamily:M, fontSize:10, color: scoreCol(r.totalScore) }}>
+              {r.totalScore}/35
+            </span>
+            <span style={{ fontSize:9, color: sigColor[r.signal] || 'var(--t2)' }}>
+              {r.signal}
+            </span>
+            <span style={{ fontFamily:M, fontSize:10, color:'var(--t2)' }}>
+              {r.price > 0 ? r.price.toFixed(2)+'元' : '—'}
+              {' '}
+              <span style={{ color: r.changePct >= 0 ? 'var(--r)' : 'var(--g)' }}>
+                {r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -321,12 +387,22 @@ export function TabAnalyze() {
             </button>
           )}
         </div>
+        {/* V6のqrow: 持仓：現持仓 + 新进攻矛 */}
         <div style={S.quickRow}>
-          <span style={S.quickLabel}>快速选择：</span>
-          {QUICK.map(q => (
+          <span style={S.quickLabel}>持仓：</span>
+          <span style={{ ...S.quickLabel, marginRight:4 }}>现持仓：</span>
+          {PORTFOLIO.map(q => (
             <button key={q.code} disabled={loading}
               onClick={() => { setCode(q.code); run(q.code) }}
               style={S.quickBtn(loading)}>{q.name}</button>
+          ))}
+          <span style={{ ...S.quickLabel, marginLeft:8, marginRight:4 }}>新进攻矛：</span>
+          {ATTACK.map(q => (
+            <button key={q.code} disabled={loading}
+              onClick={() => { setCode(q.code); run(q.code) }}
+              style={{ ...S.quickBtn(loading), borderColor:'rgba(0,240,144,0.4)', color:'var(--g)' }}>
+              {q.name}
+            </button>
           ))}
         </div>
         {error && (
