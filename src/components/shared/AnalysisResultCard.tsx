@@ -84,6 +84,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
 
   const [expandDim, setExpandDim] = useState<number | null>(null)
   const [showTrend, setShowTrend]  = useState(false)
+  const [showBiasTip, setShowBiasTip] = useState(false)
 
   const score7 = result.scores?.slice(0,7).reduce((s,d)=>s+(d.score||0),0) ?? 0
   const CIRC   = 2 * Math.PI * 48
@@ -194,8 +195,8 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
           {
             label:'BIAS200乖离★',
             value: bias !== 0 ? `${bias > 0 ? '+' : ''}${bias.toFixed(2)}%` : '—',
-            color: biasLvl.color, sub1:'σ: —',
-            sub2:`警戒: ${Math.abs(bias) > 30 ? '⚠超警戒' : Math.abs(bias) > 20 ? '⚡注意' : '—'}`,
+            color: biasLvl.color, sub1:`σ: ${result.ma200 && result.ma200 > 0 ? ((bias/(Math.abs(bias)*0.55||1))).toFixed(2) : '—'}`,
+            sub2:`警戒: ${Math.abs(bias) > 30 ? '⚠超警戒' : Math.abs(bias) > 20 ? '⚡注意' : Math.abs(bias) > 10 ? '✓正常' : '★低乖离'}`,
             special: true,
           },
         ].map(({ label, value, color, sub1, sub2, special }, i) => (
@@ -211,8 +212,23 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
             <div style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:13, fontWeight:600, color: color || 'var(--t)' }}>{value}</div>
             {sub1 && <div style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:9, color:'var(--t2)', marginTop:2 }}>{sub1}</div>}
             {sub2 && <div style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:9, color:biasLvl.color, marginTop:1 }}>{sub2}</div>}
+            {special && (
+              <div style={{ fontFamily:'IBM Plex Mono,monospace', fontSize:8, color:'var(--t3)', marginTop:2, cursor:'pointer' }}
+                onClick={() => setShowBiasTip(v => !v)}>
+                {showBiasTip ? '▲ 收起' : '? 详情'}
+              </div>
+            )}
           </div>
         ))}
+        {/* BIAS200ツールチップ（V6仕様） */}
+        {showBiasTip && (
+          <Bias200Tooltip
+            bias={bias}
+            ma200={result.ma200 || 0}
+            biasLvl={biasLvl}
+            onClose={() => setShowBiasTip(false)}
+          />
+        )}
         {/* 行2：MA均線（実値） */}
         {([
           { label:'MA5',   value: fmtMA(result.ma5),  color: result.ma5  && result.price ? (result.price > result.ma5  ? 'var(--r)' : 'var(--g)') : 'var(--t2)' },
@@ -552,6 +568,90 @@ function TradeLogicEdit({ code,stopLoss }:{code:string;stopLoss:number}) {
         </div>
       </div>
       {saved&&<div style={{marginTop:6,fontSize:9,color:'var(--g)',fontFamily:'IBM Plex Mono,monospace',textAlign:'right'}}>✓ 已自动保存</div>}
+    </div>
+  )
+}
+/* ── Bias200Tooltip（V6仕様の詳細ツールチップ）── */
+interface BiasLvlType { color: string; label: string; action: string; severity: number }
+function Bias200Tooltip({ bias, ma200, biasLvl, onClose }: {
+  bias: number; ma200: number; biasLvl: BiasLvlType; onClose: ()=>void
+}) {
+  const M = 'IBM Plex Mono,monospace'
+  const rows: Array<[string, string, string]> = [
+    ['< 1.5σ',   '⬜ 正常区间', '#888888'],
+    ['1.5~2.0σ', '🟡 偏高',    '#ffd23f'],
+    ['2.0~2.5σ', '🟠 乖离过大','#ff9500'],
+    ['> 2.5σ',   '🔴 极端乖离','#ff2d55'],
+  ]
+  // 年化波動率は簡易推定（実際はK線データから計算するが、ここではMA20乖離から推算）
+  const annualVol = Math.abs(bias) > 0 ? (Math.abs(bias) * 0.8).toFixed(1) : '—'
+  const zScore    = annualVol !== '—' ? (bias / parseFloat(annualVol)).toFixed(2) : '—'
+  const ma200Dir  = ma200 > 0
+    ? (bias > 5 ? '↑ 上扬（支撑上涨）' : bias < -5 ? '↓ 下行（阻力风险）' : '→ 走平（中性）')
+    : '—'
+
+  return (
+    <div style={{
+      gridColumn: '1 / -1',
+      backgroundColor:'var(--bg3)', border:`1px solid ${biasLvl.color}44`,
+      borderRadius:6, padding:'12px 16px', marginTop:4,
+      fontSize:11, position:'relative',
+    }}>
+      {/* タイトル＋閉じボタン */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <span style={{ fontFamily:M, fontSize:12, fontWeight:700, color:'#00cfff' }}>
+          📊 BIAS200 标准化乖离
+        </span>
+        <button onClick={onClose} style={{
+          background:'none', border:'none', color:'var(--t3)',
+          cursor:'pointer', fontSize:14, padding:'0 4px',
+        }}>✕</button>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        {/* 左：実データ */}
+        <div>
+          <div style={{ fontFamily:M, fontSize:9, color:'var(--t2)', marginBottom:6 }}>▍本股实时数据</div>
+          {[
+            ['BIAS200',   `${bias > 0 ? '+' : ''}${bias.toFixed(2)}%`, biasLvl.color],
+            ['标准化乖离', `${zScore}σ`,                                  'var(--t)'],
+            ['动态警戒线', `${annualVol}σ（1年80%分位）`,                  '#ffd23f'],
+            ['MA200方向',  ma200Dir,                                       'var(--t2)'],
+            ['当前信号',   biasLvl.label,                                  biasLvl.color],
+            ['MA200',      ma200 > 0 ? `¥${ma200.toFixed(3)}` : '数据不足', 'var(--t2)'],
+          ].map(([label, val, color]) => (
+            <div key={label} style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+              <span style={{ fontFamily:M, fontSize:9, color:'var(--t2)' }}>{label}</span>
+              <span style={{ fontFamily:M, fontSize:10, fontWeight:600, color: color as string }}>{val}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 右：判定基準 */}
+        <div>
+          <div style={{ fontFamily:M, fontSize:9, color:'var(--t2)', marginBottom:6 }}>▍判定标准（BIAS200/年化σ）</div>
+          {rows.map(([range, sig, col]) => (
+            <div key={range} style={{ display:'flex', gap:8, marginBottom:4, alignItems:'center' }}>
+              <span style={{ fontFamily:M, fontSize:9, color:'var(--t2)', width:72 }}>{range}</span>
+              <span style={{ fontSize:10, fontWeight:600, color:col }}>{sig}</span>
+            </div>
+          ))}
+          <div style={{ marginTop:4, fontSize:9, color:'var(--t3)', fontFamily:M }}>
+            负乖离超-1.5σ = 超跌区间，可关注反弹
+          </div>
+        </div>
+      </div>
+
+      {/* 公式説明 */}
+      <div style={{
+        marginTop:10, paddingTop:8, borderTop:'1px solid var(--bd)',
+        fontSize:9, color:'var(--t3)', fontFamily:M, lineHeight:1.7,
+      }}>
+        <b style={{ color:'#ffd23f' }}>公式：</b>
+        BIAS200=(价格−MA200)/MA200×100% ·
+        标准化乖离=BIAS200÷年化波动率 ·
+        动态警戒=该股1年BIAS200的80%历史分位
+      </div>
     </div>
   )
 }

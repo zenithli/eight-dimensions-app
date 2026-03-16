@@ -43,6 +43,7 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
   const [loaded,  setLoaded]  = useState(false)
   const [errMsg,  setErrMsg]  = useState('')
   const [results, setResults] = useState<TrendResult[]>([])
+  const [criteria, setCriteria] = useState<'A'|'B'|'C'>('A')
 
   const trendRef = useRef<HTMLCanvasElement>(null)
   const biasRef  = useRef<HTMLCanvasElement>(null)
@@ -656,6 +657,30 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
                 </span>
               </div>
             ))}
+          </div>
+
+          {/* 基准A/B/C選択ボタン（V6仕様） */}
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, flexWrap:'wrap' }}>
+            <span style={{ fontSize:9, color:'var(--t2)', fontFamily:m, letterSpacing:'1px' }}>评分基准：</span>
+            {(['A','B','C'] as const).map(c => (
+              <button key={c} onClick={() => setCriteria(c)} style={{
+                fontFamily:m, fontSize:10, padding:'4px 12px',
+                border: `1px solid ${criteria===c ? 'var(--c)' : 'var(--bd)'}`,
+                borderRadius:4, cursor:'pointer',
+                color: criteria===c ? 'var(--c)' : 'var(--t2)',
+                backgroundColor: criteria===c ? 'rgba(0,207,255,0.08)' : 'transparent',
+                fontWeight: criteria===c ? 700 : 400,
+              }}>
+                {c==='A' && <>基准A · 现行<span style={{ marginLeft:4, fontSize:9, opacity:.7 }}>趋势+量价+RS</span></>}
+                {c==='B' && <>基准B · 强化<span style={{ marginLeft:4, fontSize:9, opacity:.7 }}>共振+量能+Alpha</span></>}
+                {c==='C' && <>基准C · 动能<span style={{ marginLeft:4, fontSize:9, opacity:.7 }}>价格动能+资金+位置</span></>}
+              </button>
+            ))}
+            <span style={{ fontSize:9, color:'var(--t2)', fontFamily:m }}>
+              {criteria==='A' ? '趋势强度（MA排列）+ 量价健康（放量/缩量）+ 相对强弱RS（vs沪指）' :
+               criteria==='B' ? '趋势共振+量能加速+Alpha超额（强化版三维度）' :
+               '价格动能+资金流向+价格位置（动能优先）'}
+            </span>
           </div>
 
           {/* ① 趋势强度图 280px */}

@@ -132,6 +132,8 @@ function LogPanel({ logs, onClear }: { logs: LogEntry[]; onClear: ()=>void }) {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
   }, [logs.length])
 
+  if (!show) return null  // ✕で非表示
+
   const errCount  = logs.filter(l => l.level==='error').length
   const warnCount = logs.filter(l => l.level==='warn').length
   const filtered  = filter==='all' ? logs : logs.filter(l => l.level===filter)
