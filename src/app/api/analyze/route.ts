@@ -167,8 +167,10 @@ MA20乖离率：${ma20Bias}%`
     const trend = +(scores[0] ?? 3), vol2 = +(scores[1] ?? 3), alpha = +(scores[2] ?? 3)
     const baseB = +((trend * 2 + vol2 + alpha) / 4).toFixed(2)
 
-    // ⑧乖離：MA20実値優先、なければm1推算
-    const biasVal = ma20Bias !== 0 ? ma20Bias : (quote.rise1m ?? 0)
+    // ⑧乖離制御値: V6と同一 = 「近一月涨幅(rise1m)」を使用
+    // V6: const biasMonth = poolStock.m1 → rise1m相当
+    // ※MA20乖離(ma20Bias)は表示用に別途保持
+    const biasVal = quote.rise1m ?? 0
     let totalScore = baseB
     const wyck = +(scores[3] ?? 3), sect = +(scores[4] ?? 3)
     if (wyck >= 4 && sect >= 4) totalScore += 0.15
@@ -178,7 +180,7 @@ MA20乖离率：${ma20Bias}%`
     else if (biasVal > 25) totalScore -= 0.18
     else if (biasVal > 20) totalScore -= 0.08
     else if (biasVal > 0 && biasVal <= 10) totalScore += 0.05
-    totalScore = +Math.max(0, Math.min(5.5, totalScore)).toFixed(2)
+    totalScore = +Math.max(1, Math.min(5.5, totalScore)).toFixed(2)  // V6: Math.max(1,...)
 
     // 信号（V6と同じ判定）
     const signal =
