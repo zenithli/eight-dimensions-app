@@ -1,0 +1,155 @@
+// prisma/schema.prisma
+// 第一阶段：4张核心表
+// 运行方式：
+//   npx prisma generate        生成 Client
+//   npx prisma db push         同步到数据库（开发用）
+//   npx prisma migrate dev     正式迁移（生产用）
+//   npx prisma studio          可视化查看数据
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────
+// 1. 持仓
+// ──────────────────────────────────────
+model Portfolio {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(6)  // 股票代码（唯一）
+  name      String   @db.VarChar(20)
+  cost      Float    @default(0)             // 成本价
+  qty       Int      @default(0)             // 持仓数量
+  role      String   @default("")            // 进攻矛①/ETF盾牌① 等
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联持仓理由档案（一对一）
+  logic     TradeLogic?
+
+  @@map("portfolio")
+}
+
+// ──────────────────────────────────────
+// 2. 持仓理由档案
+// ──────────────────────────────────────
+model TradeLogic {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique @db.VarChar(6)
+  whyBuy        String    @default("") @db.Text  // 买入理由
+  sellCondition String    @default("") @db.Text  // 卖出条件
+  notSell       String    @default("") @db.Text  // 不会因以下原因卖
+  updatedAt     DateTime  @updatedAt
+
+  portfolio     Portfolio @relation(fields: [code], references: [code], onDelete: Cascade)
+
+  @@map("trade_logic")
+}
+
+// ──────────────────────────────────────
+// 3. AI 分析历史
+// ──────────────────────────────────────
+model AnalysisHistory {
+  id          Int      @id @default(autoincrement())
+  code        String   @db.VarChar(6)
+  name        String   @db.VarChar(20)
+  price       Float
+  changePct   Float    @default(0)
+  totalScore  Float    @default(0)           // 综合B分
+  signal      String   @default("")          // 买入/观望/止损/规避
+  stopLoss    Float?
+  targetPrice Float?
+  riskRatio   String   @default("")          // "1:2.3"
+  summary     String   @default("") @db.Text // AI综合判断
+  scoresJson  String   @default("[]") @db.Text // DimScore[] JSON
+  createdAt   DateTime @default(now())
+
+  @@index([code, createdAt])  // 按股票代码查历史
+  @@index([createdAt])        // 按时间倒序查最近记录
+  @@map("analysis_history")
+}
+
+// ──────────────────────────────────────
+// 4. 价格预警
+// ──────────────────────────────────────
+model PriceAlert {
+  id          Int      @id @default(autoincrement())
+  code        String   @db.VarChar(6)
+  name        String   @db.VarChar(20)
+  alertType   String                    // "above"（突破）/ "below"（跌破）
+  targetPrice Float
+  triggered   Boolean  @default(false)
+  triggeredAt DateTime?
+  note        String   @default("")     // 备注（如"止损价"）
+  createdAt   DateTime @default(now())
+
+  @@index([triggered])  // 快速查未触发的预警
+  @@map("price_alert")
+}
+
+// ──────────────────────────────────────
+// 5. 信号検証追跡（実際の結果を記録）
+// ──────────────────────────────────────
+model SignalTrack {
+  id              Int      @id @default(autoincrement())
+  code            String   @db.VarChar(6)
+  name            String   @db.VarChar(20)
+  signal          String                    // 买入/观望/止损
+  bScore          Float
+  triggerPrice    Float                     // シグナル発生時の価格
+  triggerDate     DateTime @default(now())
+
+  // 結果（後で更新）
+  exitPrice       Float?                    // 実際の出口価格
+  exitDate        DateTime?
+  actualReturn    Float?                    // 実際の収益率(%)
+  outcome         String?                  // win / loss / breakeven / open
+
+  // 大盤コンテキスト（帰因分析用）
+  marketState     String?                  // strong/sideways/weak
+  shIndexPct      Float?                   // 当日上証指数変動%
+  sectorPct       Float?                   // 当日板块変動%
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([code, triggerDate])
+  @@index([outcome])
+  @@index([signal, bScore])
+  @@map("signal_track")
+}
+
+// ──────────────────────────────────────
+// 6. 止損帰因記録
+// ──────────────────────────────────────
+model StopLossEvent {
+  id              Int      @id @default(autoincrement())
+  code            String   @db.VarChar(6)
+  name            String   @db.VarChar(20)
+  entryPrice      Float
+  stopPrice       Float
+  exitPrice       Float
+  lossRate        Float                    // 亏损比例(%)
+
+  // 帰因分類
+  causeType       String   @default("")   // systematic/stock-specific/unknown
+  // systematic   = 大盘同日跌幅相近（系统性风险）
+  // stock-specific = 大盘正常但个股大跌（个股风险）
+  // unknown      = 未分析
+
+  shIndexPct      Float?                  // 止損当日の上証変動%
+  stockPct        Float?                  // 止損当日の个股変動%
+  bScoreAtEntry   Float?                  // 建仓時のB分
+  bScoreAtStop    Float?                  // 止損時のB分
+
+  note            String   @default("") @db.Text
+  createdAt       DateTime @default(now())
+
+  @@index([causeType])
+  @@index([createdAt])
+  @@map("stop_loss_event")
+}
