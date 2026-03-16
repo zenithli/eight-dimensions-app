@@ -177,7 +177,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
             <div style={{ position:'relative', width:112, height:112, margin:'0 auto' }}>
               <svg width="112" height="112" viewBox="0 0 112 112"
                 style={{ transform:'rotate(-90deg)', display:'block' }}>
-                <circle className="rb" cx="56" cy="56" r="48"
+                <circle cx="56" cy="56" r="48"
                   fill="none" stroke="var(--bd2)" strokeWidth="6"/>
                 <circle cx="56" cy="56" r="48"
                   fill="none" stroke={signal.color} strokeWidth="6"
