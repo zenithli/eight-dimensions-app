@@ -115,27 +115,41 @@ export interface DimScore {
 }
 
 export interface AnalysisResult {
-  code:        string
-  name:        string
-  price:       number
-  changePct:   number
-  totalScore:  number      // 综合B分
-  change?:     number
-  high?:       number
-  low?:        number
-  open?:       number
-  volume?:     number
-  amount?:     number
-  volRatio?:   number
-  ma20Bias?:   number      // MA20乖離率（%）
-  signal:      string      // 买入/观望/止损
-  stopLoss:    number
-  targetPrice: number
-  riskRatio:   string      // "1:2.3"
-  summary:     string      // AIの総合コメント
-  scores:      DimScore[]
-  analyses:    string[]    // 各次元テキスト
-  createdAt:   string
+  code:           string
+  name:           string
+  price:          number
+  changePct:      number
+  totalScore:     number      // 综合B分
+  change?:        number
+  high?:          number
+  low?:           number
+  open?:          number
+  volume?:        number
+  amount?:        number
+  volRatio?:      number
+  turnoverPct?:   number      // 換手率%
+  // MA均線
+  ma5?:           number
+  ma10?:          number
+  ma20?:          number
+  ma60?:          number
+  ma120?:         number
+  ma200?:         number
+  ma20Bias?:      number      // MA20乖離率（%）
+  biasLabel?:     string      // 乖離ラベル（+22% 注意 など）
+  biasActionText?: string     // 乖離操作建議
+  signal:         string
+  stopLoss:       number
+  targetPrice:    number
+  riskRatio:      string
+  summary:        string
+  actionEntry?:   string      // 建仓策略
+  actionHold?:    string      // 持仓管理
+  actionRisk?:    string      // 风险提示
+  scores:         DimScore[]
+  analyses:       string[]
+  createdAt:      string
+  dataFreshness?: string      // 'today' | 'yesterday' | 'unknown'
 }
 
 // ─────────────────────────────────────────
