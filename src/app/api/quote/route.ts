@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         rise6d:    q.rise6d,
         rise1m:    q.rise1m,
         riseMon:   q.riseMon,
+        rise3m:    q.rise3m,
       }
     })
 

@@ -32,6 +32,7 @@ export interface RealtimeQuote {
   rise6d:    number
   rise1m:    number
   riseMon:   number
+  rise3m:    number   // 近3ヶ月涨幅（90日動能）
   volRatio:  number
   volume:    number
   amount:    number
@@ -72,6 +73,7 @@ export async function fetchRealtimeQuote(code: string): Promise<RealtimeQuote> {
     rise6d:    d.f128  !== undefined ? +(d.f128  / 100).toFixed(2) : 0,
     rise1m:    d.f129  !== undefined ? +(d.f129  / 100).toFixed(2) : 0,
     riseMon:   d.f130  !== undefined ? +(d.f130  / 100).toFixed(2) : 0,
+    rise3m:    d.f133  !== undefined ? +(d.f133  / 100).toFixed(2) : 0,  // 近3ヶ月
     volRatio:  d.f50   !== undefined ? +(d.f50   / 100).toFixed(2) : 1,
     volume:    d.f47   ?? 0,
     amount:    d.f48   ?? 0,

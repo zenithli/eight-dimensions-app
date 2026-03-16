@@ -25,6 +25,7 @@ export interface PoolStockRaw {
   d6:       number
   m1:       number
   mon:      number
+  d90?:     number   // 90日涨幅（近3ヶ月）
   volr:     number
   ma20Bias?: number | null
   bScore?:  number  // 計算済みならそのまま使う

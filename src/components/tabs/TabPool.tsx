@@ -114,7 +114,7 @@ export function TabPool() {
         const q = map.get(s.code) as Record<string,number> | undefined
         if (!q) return s
         return { ...s, price:q.price, chg:q.changePct, d3:q.rise3d??0,
-                 d6:q.rise6d, m1:q.rise1m, mon:q.riseMon, volr:q.volRatio, dataMode:'realtime' }
+                 d6:q.rise6d, m1:q.rise1m, mon:q.riseMon, d90:q.rise3m??0, volr:q.volRatio, dataMode:'realtime' }
       })
       save(updated)
       setStatusOk(true)
@@ -232,7 +232,7 @@ export function TabPool() {
           <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-                {['#','股票','定位','B分','今日%','6日%','近一月%','⑧乖离','止损','目标','操作'].map((h: string) => (
+                {['#','股票','定位','B分','今日%','6日%','近一月%','90日%','⑧乖离','止损','目标','操作'].map((h: string) => (
                   <th key={h} style={{
                     textAlign:'left', fontSize:9, color:'var(--t2)',
                     paddingBottom:8, paddingRight:10, fontWeight:500, letterSpacing:'0.05em',
@@ -329,6 +329,9 @@ function PoolRow({ stock: s, rank, onRemove }: { stock: PoolStockView; rank: num
       <td style={{ padding:'9px 10px 9px 0', color:pctColor(s.chg) }}>{fmtPct(s.chg)}</td>
       <td style={{ padding:'9px 10px 9px 0', color:pctColor(s.d6)  }}>{fmtPct(s.d6)}</td>
       <td style={{ padding:'9px 10px 9px 0', color:pctColor(s.m1)  }}>{fmtPct(s.m1)}</td>
+      <td style={{ padding:'9px 10px 9px 0', color:pctColor(s.d90 ?? 0), fontFamily:'IBM Plex Mono' }}>
+        {s.d90 ? fmtPct(s.d90) : '—'}
+      </td>
       <td style={{ padding:'9px 10px 9px 0' }}>
         <div style={{ display:'flex', alignItems:'center', gap:4, flexWrap:'wrap' }}>
           <span title={biasLevel.action} style={C.tag(biasLevel.color)}>{biasLevel.label}</span>
