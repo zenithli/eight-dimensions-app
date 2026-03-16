@@ -43,14 +43,15 @@ export function MainLayout() {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px 64px' }}>
         <TabNav activeTab={activeTab} onChange={setActiveTab} />
         <div style={{ marginTop: 12 }}>
-          {activeTab === 'analyze'   && <TabAnalyze />}
-          {activeTab === 'portfolio' && <TabPortfolio />}
-          {activeTab === 'compare'   && <TabCompare />}
-          {activeTab === 'alerts'    && <TabAlerts />}
-          {activeTab === 'pool'      && <TabPool />}
-          {activeTab === 'tactic'    && <TabTactic />}
-          {activeTab === 'history'   && <TabHistory />}
-          {activeTab === 'changelog' && <TabChangelog />}
+          {/* display:noneで非表示（アンマウントしないのでstateが保持される） */}
+          <div style={{ display: activeTab === 'analyze'   ? 'block' : 'none' }}><TabAnalyze /></div>
+          <div style={{ display: activeTab === 'portfolio' ? 'block' : 'none' }}><TabPortfolio /></div>
+          <div style={{ display: activeTab === 'compare'   ? 'block' : 'none' }}><TabCompare /></div>
+          <div style={{ display: activeTab === 'alerts'    ? 'block' : 'none' }}><TabAlerts /></div>
+          <div style={{ display: activeTab === 'pool'      ? 'block' : 'none' }}><TabPool /></div>
+          <div style={{ display: activeTab === 'tactic'    ? 'block' : 'none' }}><TabTactic /></div>
+          <div style={{ display: activeTab === 'history'   ? 'block' : 'none' }}><TabHistory /></div>
+          <div style={{ display: activeTab === 'changelog' ? 'block' : 'none' }}><TabChangelog /></div>
         </div>
       </div>
 

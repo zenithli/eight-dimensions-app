@@ -120,6 +120,14 @@ export interface AnalysisResult {
   price:       number
   changePct:   number
   totalScore:  number      // 综合B分
+  change?:     number
+  high?:       number
+  low?:        number
+  open?:       number
+  volume?:     number
+  amount?:     number
+  volRatio?:   number
+  ma20Bias?:   number      // MA20乖離率（%）
   signal:      string      // 买入/观望/止损
   stopLoss:    number
   targetPrice: number

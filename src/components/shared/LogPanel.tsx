@@ -163,58 +163,74 @@ function LogRow({ log }: { log: import('@/lib/logger').LogEntry; [k:string]:unkn
   const [expanded, setExpanded] = useState(false)
   const color = LEVEL_COLOR[log.level]
   const icon  = LEVEL_ICON[log.level]
+  const isError = log.level === 'error'
+  const isWarn  = log.level === 'warn'
+  const isOk    = log.level === 'ok'
+  const isStep  = log.level === 'step'
+
+  const bg = isError ? 'rgba(255,45,85,0.10)'
+           : isWarn  ? 'rgba(255,204,0,0.07)'
+           : isOk    ? 'rgba(0,200,83,0.05)'
+           : isStep  ? 'rgba(0,180,204,0.05)'
+           : 'transparent'
 
   return (
     <div
-      onClick={() => log.detail && setExpanded(v => !v)}
+      onClick={() => setExpanded(v => !v)}
       style={{
-        display: 'flex', alignItems: 'flex-start', gap: 8,
-        padding: '3px 12px',
-        cursor: log.detail ? 'pointer' : 'default',
-        borderBottom: '1px solid rgba(56,200,255,0.03)',
+        display: 'flex', alignItems: 'flex-start', gap: 0,
+        padding: '3px 0',
+        paddingLeft: (isError || isWarn) ? 6 : 9,
+        cursor: 'pointer',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderLeft: isError ? '3px solid #ff2d55'
+                  : isWarn  ? '3px solid #ffcc00' : 'none',
+        background: bg,
       }}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(56,200,255,0.03)')}
-      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
     >
       {/* 時刻 */}
-      <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0, paddingTop: 2 }}>
+      <span style={{ color:'var(--t3)', minWidth:76, fontSize:9, flexShrink:0,
+        fontFamily:'IBM Plex Mono', paddingTop:1 }}>
         {log.ts}
       </span>
-      {/* レベルアイコン */}
-      <span style={{ fontSize: 10, flexShrink: 0, color }}>{icon}</span>
       {/* ステップ */}
-      {log.step && (
-        <span style={{
-          fontSize: 8, padding: '0 4px',
-          border: `1px solid ${color}40`, borderRadius: 2,
-          color, flexShrink: 0,
-        }}>
-          {log.step}
+      <span style={{ color:'#2a5060', minWidth:52, fontSize:8, flexShrink:0,
+        fontFamily:'IBM Plex Mono', paddingTop:2 }}>
+        {log.step || ''}
+      </span>
+      {/* アイコン */}
+      <span style={{ color, minWidth:16, fontSize:10, fontWeight:700, flexShrink:0 }}>
+        {icon}
+      </span>
+      {/* メッセージ */}
+      <span style={{ color, flex:1, wordBreak:'break-all', fontSize:10,
+        fontWeight: isError ? 700 : 400 }}>
+        {log.msg}
+      </span>
+      {/* 詳細 */}
+      {log.detail && (
+        <span
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v) }}
+          style={{
+            color:'#3a5570', fontSize:9, maxWidth:200, overflow:'hidden',
+            textOverflow:'ellipsis', whiteSpace:'nowrap', cursor:'pointer',
+            padding:'1px 6px', borderRadius:2,
+            border:'1px solid #1a3050', marginLeft:6, flexShrink:0,
+          }}
+          title={log.detail}
+        >
+          {log.detail.slice(0,40)}{log.detail.length > 40 ? '…' : ''}
         </span>
       )}
-      {/* メッセージ */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 11, color: 'var(--t)', lineHeight: 1.5 }}>
-          {log.msg}
-        </span>
-        {/* 詳細（展開） */}
-        {expanded && log.detail && (
-          <div style={{
-            fontSize: 10, color: 'var(--t2)', marginTop: 2,
-            paddingLeft: 8, borderLeft: `2px solid ${color}40`,
-            lineHeight: 1.6, wordBreak: 'break-all',
-          }}>
-            {log.detail}
-          </div>
-        )}
-      </div>
-      {/* 詳細インジケーター */}
-      {log.detail && (
-        <span style={{
-          fontSize: 9, color: 'var(--t3)', flexShrink: 0,
-          transform: expanded ? 'rotate(180deg)' : 'none',
-          transition: 'transform .2s',
-        }}>▾</span>
+      {/* 展開詳細 */}
+      {expanded && log.detail && (
+        <div style={{
+          fontSize:9, color:'var(--t2)', marginTop:2,
+          paddingLeft:152, borderTop:'1px solid rgba(56,200,255,0.08)',
+          lineHeight:1.6, wordBreak:'break-all', width:'100%',
+        }}>
+          {log.detail}
+        </div>
       )}
     </div>
   )

@@ -97,6 +97,37 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
         </div>
       </div>
 
+      {/* ── databar：行情データ（V6スタイル）── */}
+      <div style={{
+        backgroundColor:'var(--bg2)', border:'1px solid var(--bd)', borderRadius:12,
+        padding:'12px 16px',
+      }}>
+        <div style={{
+          display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(100px, 1fr))',
+          gap:8,
+        }}>
+          {[
+            { label:'今开',   value: result.open   ? `¥${result.open.toFixed(2)}`   : '—' },
+            { label:'最高',   value: result.high   ? `¥${result.high.toFixed(2)}`   : '—', color:'var(--r)' },
+            { label:'最低',   value: result.low    ? `¥${result.low.toFixed(2)}`    : '—', color:'var(--g)' },
+            { label:'成交量', value: result.volume ? `${(result.volume/10000).toFixed(0)}万` : '—' },
+            { label:'量比',   value: result.volRatio ? `${result.volRatio.toFixed(2)}x` : '—' },
+            { label:'⑧乖离', value: result.ma20Bias != null ? `${result.ma20Bias.toFixed(1)}%` : (result.changePct != null ? `${result.changePct > 0 ? '+' : ''}${result.changePct.toFixed(1)}%` : '—'),
+              color: (result.ma20Bias ?? 0) > 30 ? 'var(--r)' : (result.ma20Bias ?? 0) > 15 ? 'var(--y)' : 'var(--g)',
+            },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{
+              backgroundColor:'var(--bg3)', borderRadius:6, padding:'7px 10px',
+            }}>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)',
+                letterSpacing:'0.08em', marginBottom:3 }}>{label}</div>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:12, fontWeight:700,
+                color: color || 'var(--t)' }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── 八维度スコアバー ── */}
       <div style={{
         backgroundColor:'var(--bg2)', border:'1px solid var(--bd)', borderRadius:12, padding:20,
