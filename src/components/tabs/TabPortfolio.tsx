@@ -168,7 +168,7 @@ function PortCard({ item }: { item: PortfolioItem }) {
       <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--c)', marginBottom:3, letterSpacing:'0.05em' }}>
         {item.code}
       </div>
-      <div style={{ fontWeight:700, color:'#fff', fontSize:14, marginBottom:4 }}>
+      <div style={{ fontWeight:700, color:'var(--t)', fontSize:14, marginBottom:4 }}>
         {item.name}
       </div>
       <div style={{ fontFamily:'IBM Plex Mono', fontSize:11, color:'var(--t2)', marginBottom:6 }}>
@@ -409,7 +409,7 @@ function CsvModal({
                           }}>{statusLabel}</span>
                         </td>
                         <td style={{ padding:'6px 10px 6px 0', color:'var(--c)' }}>{row.code}</td>
-                        <td style={{ padding:'6px 10px 6px 0', color:'#fff', fontWeight:700 }}>{row.name}</td>
+                        <td style={{ padding:'6px 10px 6px 0', color:'var(--t)', fontWeight:700 }}>{row.name}</td>
                         <td style={{ padding:'6px 10px 6px 0' }}>{row.cost.toFixed(2)}</td>
                         <td style={{ padding:'6px 10px 6px 0', color:'var(--t2)' }}>
                           {row.qty > 0 ? row.qty.toLocaleString() : '—'}

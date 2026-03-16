@@ -198,7 +198,7 @@ export function TabCompare() {
                     <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t)', marginBottom:2 }}>
                       #{rank+1} · {r.code}
                     </div>
-                    <div style={{ fontWeight:700, color:'#fff', fontSize:14, marginBottom:6 }}>{r.name}</div>
+                    <div style={{ fontWeight:700, color:'var(--t)', fontSize:14, marginBottom:6 }}>{r.name}</div>
                     <div style={{ fontFamily:'IBM Plex Mono', fontSize:32, fontWeight:900, color:sig.color, lineHeight:1 }}>
                       {r.totalScore.toFixed(2)}
                     </div>
