@@ -67,6 +67,52 @@ export function TabTactic() {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
 
+      {/* V6: 🧠 低频操作三大核心思维 */}
+      <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)', borderRadius:8, padding:'14px 16px' }}>
+        <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.12em', marginBottom:12 }}>
+          🧠 低频操作三大核心思维 · 防止频繁换仓的根本解法
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:14 }}>
+          {[
+            { color:'var(--r)', title:'思维①  买卖分离', body:'B分/技术信号只负责「什么时候买」。买入后不再用B分决定卖出。\n\n持股期间B分下降 ≠ 卖出信号。只有触发③才能卖出。', tag:'B分只管买入' },
+            { color:'var(--y)', title:'思维②  逻辑优先', body:'只能说「B分高」→ 动能消退立即动摇。\n\n能说出「3个月内的基本面逻辑」→ 短期波动不影响判断。', tag:'说得出理由才持股' },
+            { color:'var(--g)', title:'思维③  三触发卖出', body:'触发① 止损线触穿（-8%/-10%无条件）\n触发② 持仓逻辑根本性破坏（≠B分下降）\n触发③ 月评连续两周B<3.5\n\n其他任何理由全部无效：大盘跌、有更高B分的、短期消息扰动…', tag:'无触发=不动' },
+          ].map(item => (
+            <div key={item.title} style={{
+              backgroundColor:'var(--bg3)', border:'1px solid var(--bd)',
+              borderTop:`2px solid ${item.color}`, padding:'14px 16px'
+            }}>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:11, fontWeight:700, color:item.color, marginBottom:8 }}>{item.title}</div>
+              <div style={{ fontSize:11, color:'var(--t)', lineHeight:1.9, whiteSpace:'pre-line', marginBottom:8 }}>{item.body}</div>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:item.color, padding:'4px 8px', border:`1px solid ${item.color}`, display:'inline-block' }}>{item.tag}</div>
+            </div>
+          ))}
+        </div>
+        {/* 決策树 */}
+        <div style={{ backgroundColor:'var(--bg3)', border:'1px solid rgba(0,207,255,0.25)', padding:'14px 18px' }}>
+          <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--c)', marginBottom:10, letterSpacing:'2px' }}>WEEKLY REVIEW · 每周复盘只问一件事</div>
+          <div style={{ textAlign:'center', fontSize:13, fontWeight:700, color:'var(--t)', padding:'8px', backgroundColor:'rgba(0,207,255,0.08)', borderRadius:4, marginBottom:12 }}>
+            「我当初买入的理由，今天还成立吗？」
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+            {[
+              { color:'var(--g)', title:'✅ 成立', body:'继续持有，什么都不做。不看B分变化，不管其他股涨多好。' },
+              { color:'var(--y)', title:'❓ 不确定', body:'不加仓，不减仓，不换股。下周再看，连续两周才评估。' },
+              { color:'var(--r)', title:'❌ 不成立/止损触发', body:'执行卖出，无条件，不等明天，不看盘感，止损是规则。' },
+            ].map(item => (
+              <div key={item.title} style={{
+                backgroundColor:`rgba(${item.color==='var(--g)'?'0,232,122':item.color==='var(--y)'?'255,210,63':'255,45,85'},0.07)`,
+                border:`1px solid rgba(${item.color==='var(--g)'?'0,232,122':item.color==='var(--y)'?'255,210,63':'255,45,85'},0.25)`,
+                padding:'10px 12px'
+              }}>
+                <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, fontWeight:700, color:item.color, marginBottom:5 }}>{item.title}</div>
+                <div style={{ fontSize:11, color:'var(--t2)' }}>{item.body}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* バックテスト統計 */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
         {[

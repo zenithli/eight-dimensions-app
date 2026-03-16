@@ -305,7 +305,70 @@ export function TabCompare() {
             </div>
           </>
         )}
+
+        {/* RADAR OVERLAY · V6の cmpRadars 相当 */}
+        {results.length > 0 && (
+          <div style={{ marginTop:16, backgroundColor:'var(--bg2)', border:'1px solid var(--bd)',
+            borderRadius:8, padding:'14px 16px' }}>
+            <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)',
+              letterSpacing:'0.12em', marginBottom:12 }}>
+              RADAR OVERLAY · 雷达图叠加
+            </div>
+            <div style={{ display:'flex', gap:16, flexWrap:'wrap', justifyContent:'center' }}>
+              {results.map((r, idx) => {
+                const COLORS = ['#00cfff','#00e87a','#ff2d55','#ffd23f','#a78bfa','#ff8c35']
+                const color = COLORS[idx % COLORS.length]
+                const scores = (r.scores || []).slice(0, 7).map((s: {score?:number}|number) =>
+                  typeof s === 'object' ? (s.score ?? 3) : (s ?? 3))
+                return (
+                  <div key={r.code} style={{ textAlign:'center' }}>
+                    <CompareRadar scores={scores} color={color} size={180}/>
+                    <div style={{ fontFamily:'IBM Plex Mono', fontSize:10, color:'var(--t2)', marginTop:6 }}>
+                      {r.name||r.code} ({r.totalScore||0}/35)
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </Card>
     </div>
+  )
+}
+
+// V6のdrawRadarをReact SVGで実装（cmpRadars対応）
+function CompareRadar({ scores, color, size = 180 }: { scores: number[]; color: string; size?: number }) {
+  const cx = size/2, cy = size/2, R = size * 0.34, n = 7
+  const labels = ['趋势','量价','强弱','威科夫','板块','资金','基本面']
+  const angle = (i: number) => (i / n) * 2 * Math.PI - Math.PI / 2
+  const pt = (i: number, v: number): [number, number] => [
+    cx + (v / 5) * R * Math.cos(angle(i)),
+    cy + (v / 5) * R * Math.sin(angle(i)),
+  ]
+  const vals = scores.slice(0, 7).map((s, i) => scores[i] ?? 3)
+  const fc = color.replace('rgb(', 'rgba(').replace(')', ',0.12)')
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {[1,2,3,4,5].map(g => (
+        <polygon key={g} fill="none" stroke="rgba(0,207,255,0.08)" strokeWidth="0.5"
+          points={Array.from({length:n}, (_, i) => pt(i, g).join(',')).join(' ')}/>
+      ))}
+      {Array.from({length:n}, (_, i) => (
+        <line key={i} x1={cx} y1={cy} x2={pt(i,5)[0]} y2={pt(i,5)[1]}
+          stroke="rgba(0,207,255,0.06)" strokeWidth="0.5"/>
+      ))}
+      <polygon fill={fc} stroke={color} strokeWidth="1.5"
+        points={vals.map((v, i) => pt(i, v).join(',')).join(' ')}/>
+      {vals.map((v, i) => {
+        const [x, y] = pt(i, v)
+        return <circle key={i} cx={x} cy={y} r={2.5} fill={color}/>
+      })}
+      {labels.map((label, i) => {
+        const [x, y] = pt(i, 5.8)
+        return <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
+          fontSize="9" fontFamily="IBM Plex Mono,monospace" fill="var(--t2)">{label}</text>
+      })}
+    </svg>
   )
 }

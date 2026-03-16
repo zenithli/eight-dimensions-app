@@ -658,13 +658,35 @@ function PortfolioRanking({ items }: { items: PortfolioItem[] }) {
     { key: 'cost',   label: '成本价' },
     { key: 'qty',    label: '持股数' },
   ]
+  // V6: renderPortfolio() - histからB分・信号を取得して表示
+  const [hist, setHist] = React.useState<Array<{code:string;totalScore:number;signal:string;price:number;stopLoss?:number;targetPrice?:number}>>([])
+  React.useEffect(() => {
+    try {
+      const h = JSON.parse(localStorage.getItem('history_v7') || '[]')
+      const seen = new Set<string>()
+      const items: typeof hist = []
+      for (const e of h) {
+        if (!seen.has(e.code)) {
+          seen.add(e.code)
+          items.push({ code:e.code, totalScore:e.totalScore||0, signal:e.signal||'', price:e.price||0, stopLoss:e.stopLoss, targetPrice:e.targetPrice })
+        }
+      }
+      setHist(items)
+    } catch {}
+  }, [])
+  const sigColor: Record<string,string> = {
+    '强力买入':'var(--g)','建议买入':'var(--g)','买入':'var(--g)',
+    '持有':'var(--c)','观察':'var(--y)','观望':'var(--y)',
+    '减仓':'var(--o)','规避':'var(--r)','清仓':'var(--r)',
+  }
+  const scoreCol = (s:number) => s>=28?'var(--g)':s>=22?'var(--c)':s>=16?'var(--y)':'var(--r)'
 
   return (
     <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)',
       borderRadius:12, padding:'14px 16px', marginBottom:12 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
         <span style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.12em' }}>
-          PORTFOLIO RANK · 持仓对比排名
+          RANKING · 持仓评分排名
         </span>
         <div style={{ display:'flex', gap:6 }}>
           {sortBtns.map(b => (
@@ -682,7 +704,7 @@ function PortfolioRanking({ items }: { items: PortfolioItem[] }) {
         <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
           <thead>
             <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-              {['#','股票','现价','成本','涨跌幅','盈亏额','持股数'].map(h => (
+              {['#','股票','B分','信号','现价','成本','涨跌幅','盈亏额','持股数','止损','目标'].map(h => (
                 <th key={h} style={{ textAlign:'left', padding:'6px 10px 6px 0',
                   fontSize:9, color:'var(--t2)', fontWeight:500 }}>{h}</th>
               ))}
@@ -713,6 +735,35 @@ function PortfolioRanking({ items }: { items: PortfolioItem[] }) {
                   <td style={{ padding:'7px 10px 7px 0', color:'var(--t2)' }}>
                     {item.qty > 0 ? item.qty.toLocaleString() : '—'}
                   </td>
+                  {(() => {
+                    const rec = hist.find(h => h.code === item.code)
+                    return rec ? (<>
+                      {/* B分 */}
+                      <td style={{ padding:'7px 10px 7px 0' }}>
+                        <div style={{ fontFamily:'IBM Plex Mono', fontSize:11, fontWeight:700, color: scoreCol(rec.totalScore) }}>
+                          {rec.totalScore}
+                        </div>
+                        <div style={{ width:50, height:3, backgroundColor:'var(--bg3)', borderRadius:2, marginTop:2 }}>
+                          <div style={{ width:`${rec.totalScore/35*100}%`, height:'100%', backgroundColor: scoreCol(rec.totalScore), borderRadius:2 }}/>
+                        </div>
+                      </td>
+                      {/* 信号 */}
+                      <td style={{ padding:'7px 10px 7px 0', fontSize:10, color: sigColor[rec.signal]||'var(--t2)', fontWeight:500 }}>
+                        {rec.signal||'—'}
+                      </td>
+                      {/* 止損 */}
+                      <td style={{ padding:'7px 10px 7px 0', fontFamily:'IBM Plex Mono', color:'var(--r)' }}>
+                        {rec.stopLoss ? `¥${Number(rec.stopLoss).toFixed(2)}` : '—'}
+                      </td>
+                      {/* 目標 */}
+                      <td style={{ padding:'7px 10px 7px 0', fontFamily:'IBM Plex Mono', color:'var(--g)' }}>
+                        {rec.targetPrice ? `¥${Number(rec.targetPrice).toFixed(2)}` : '—'}
+                      </td>
+                    </>) : (<>
+                      <td style={{ padding:'7px 10px 7px 0', fontSize:9, color:'var(--t3)' }}>未分析</td>
+                      <td/><td/><td/>
+                    </>)
+                  })()}
                 </tr>
               )
             })}

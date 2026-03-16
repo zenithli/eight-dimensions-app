@@ -119,6 +119,46 @@ export function TabAlerts() {
         ))}
       </div>
 
+      {/* V6: QUICK SETUP · 从持仓批量设置止损预警 */}
+      <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)',
+        borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+        <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)',
+          letterSpacing:'0.12em', marginBottom:10 }}>
+          QUICK SETUP · 从持仓批量设置止损预警
+        </div>
+        <div style={{ fontSize:11, color:'var(--t2)', marginBottom:10, lineHeight:1.7 }}>
+          根据持仓成本价自动计算止损价（成本×0.92），一键批量添加跌破预警。
+        </div>
+        <button
+          onClick={() => {
+            try {
+              const portfolio = JSON.parse(localStorage.getItem('portfolio_v7') || '[]')
+              if (!portfolio.length) { alert('持仓为空，请先在「我的持仓」添加股票'); return }
+              const existing = JSON.parse(localStorage.getItem('alerts_v7') || '[]')
+              let added = 0
+              portfolio.forEach((p: {code:string; name:string; cost:number}) => {
+                if (!p.code || !p.cost) return
+                if (existing.some((a: {code:string}) => a.code === p.code)) return
+                const stopPrice = +(p.cost * 0.92).toFixed(2)
+                existing.push({ id: Date.now() + added, code: p.code, name: p.name||p.code,
+                  price: stopPrice, type: 'below',
+                  note: `成本止损-8%（¥${p.cost.toFixed(2)}×0.92）`,
+                  createdAt: new Date().toISOString() })
+                added++
+              })
+              if (added > 0) {
+                localStorage.setItem('alerts_v7', JSON.stringify(existing))
+                alert(`已添加 ${added} 条止损预警`); window.location.reload()
+              } else { alert('全部已有预警，无需重复添加') }
+            } catch { alert('批量设置失败') }
+          }}
+          style={{ fontFamily:'IBM Plex Mono', fontSize:11, padding:'8px 16px',
+            border:'1px solid var(--c)', borderRadius:4, cursor:'pointer',
+            color:'var(--c)', backgroundColor:'transparent' }}>
+          📋 批量导入持仓止损价（成本×0.92）
+        </button>
+      </div>
+
       <Card title="ALERTS · 价格预警"
         action={
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>

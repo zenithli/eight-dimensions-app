@@ -344,7 +344,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
           }}>
             {result.analyses.map((a, i) => a ? (
               <div key={i} style={{ marginBottom:3 }}>
-                <b style={{ color: i===0||i===4?'#00cfff':i===1||i===5?'#00e87a':i===2||i===6?'#ffd23f':i===3?'#a78bfa':'#ff2d55', fontWeight:500, fontFamily:'IBM Plex Mono,monospace' }}>
+                <b style={{ color: (result.scores?.[i]?.score??3)>=4?'#00e87a':(result.scores?.[i]?.score??3)<=2?'#ff2d55':'#00cfff', fontWeight:500, fontFamily:'IBM Plex Mono,monospace' }}>
                   {DIM_ICONS[i]}{DIM_NAMES[i]}：
                 </b>{a}
               </div>
@@ -438,7 +438,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
 /* ── RadarChart ── */
 function RadarChart({ scores }: { scores: Array<{ score: number }> }) {
   const cx=120,cy=120,r=90,n=7
-  const labels=['热势','量价','Alpha','威科夫','板块','资金','基本']
+  const labels=['趋势','量价','强弱','威科夫','板块','资金','基本面']
   const angle = (i:number) => (i/n)*2*Math.PI - Math.PI/2
   const pt    = (i:number,v:number): [number,number] => [cx+((v/5)*r)*Math.cos(angle(i)), cy+((v/5)*r)*Math.sin(angle(i))]
   const vals  = scores.slice(0,7).map(s=>s?.score??0)
@@ -446,7 +446,16 @@ function RadarChart({ scores }: { scores: Array<{ score: number }> }) {
     <svg width="240" height="240" viewBox="0 0 240 240" style={{ display:'block', margin:'0 auto' }}>
       {[1,2,3,4,5].map(g=><polygon key={g} fill="none" stroke="rgba(0,207,255,0.08)" strokeWidth="0.5" points={Array.from({length:n},(_,i)=>pt(i,g).join(',')).join(' ')}/>)}
       {Array.from({length:n},(_,i)=><line key={i} x1={cx} y1={cy} x2={pt(i,5)[0]} y2={pt(i,5)[1]} stroke="rgba(0,207,255,0.06)" strokeWidth="0.5"/>)}
-      <polygon fill="rgba(0,207,255,0.12)" stroke="#00cfff" strokeWidth="1.5" points={vals.map((v,i)=>pt(i,v).join(',')).join(' ')}/>
+      {(() => {
+    const avg = vals.reduce((a,b)=>a+b,0)/vals.length
+    // V6: avg>=4→緑, avg<=2.5→赤, else→青
+    const fc = avg>=4 ? 'rgba(0,232,122,0.12)' : avg<=2.5 ? 'rgba(255,45,85,0.12)' : 'rgba(0,207,255,0.12)'
+    const sc = avg>=4 ? 'rgba(0,232,122,0.8)'  : avg<=2.5 ? 'rgba(255,45,85,0.8)'  : 'rgba(0,207,255,0.8)'
+    return (
+      <polygon fill={fc} stroke={sc} strokeWidth="1.5"
+        points={vals.map((v,i)=>pt(i,v).join(',')).join(' ')}/>
+    )
+  })()}
       {labels.map((label,i)=>{const[x,y]=pt(i,5.8);return<text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="10" fontFamily="IBM Plex Mono,monospace" fill="var(--t2)">{label}</text>})}
     </svg>
   )
@@ -571,11 +580,42 @@ function TradeLogicEdit({ code,stopLoss }:{code:string;stopLoss:number}) {
     </div>
   )
 }
-/* ── Bias200Tooltip（V6仕様の詳細ツールチップ）── */
+/* ── Bias200Tooltip（V6仕様・ドラッグ対応）── */
 interface BiasLvlType { color: string; label: string; action: string; severity: number }
 function Bias200Tooltip({ bias, ma200, biasLvl, onClose }: {
   bias: number; ma200: number; biasLvl: BiasLvlType; onClose: ()=>void
 }) {
+  const tipRef = React.useRef<HTMLDivElement>(null)
+  // V6のドラッグ実装を移植
+  React.useEffect(() => {
+    let isDragging = false, dragStartX = 0, dragStartY = 0, tipStartX = 0, tipStartY = 0
+    const tip = tipRef.current
+    if (!tip) return
+    const onDown = (e: MouseEvent) => {
+      const bar = (e.target as Element).closest('[data-drag-bar]')
+      if (!bar) return
+      isDragging = true
+      dragStartX = e.clientX; dragStartY = e.clientY
+      tipStartX = parseInt(tip.style.left || '0') || 0
+      tipStartY = parseInt(tip.style.top  || '0') || 0
+      e.preventDefault()
+    }
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging) return
+      const dx = e.clientX - dragStartX, dy = e.clientY - dragStartY
+      tip.style.left = Math.max(4, Math.min(window.innerWidth - 320, tipStartX + dx)) + 'px'
+      tip.style.top  = Math.max(4, Math.min(window.innerHeight - 60, tipStartY + dy)) + 'px'
+    }
+    const onUp = () => { isDragging = false }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup',   onUp)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup',   onUp)
+    }
+  }, [])
   const M = 'IBM Plex Mono,monospace'
   const rows: Array<[string, string, string]> = [
     ['< 1.5σ',   '⬜ 正常区间', '#888888'],
@@ -591,16 +631,17 @@ function Bias200Tooltip({ bias, ma200, biasLvl, onClose }: {
     : '—'
 
   return (
-    <div style={{
+    <div ref={tipRef} style={{
       gridColumn: '1 / -1',
       backgroundColor:'var(--bg3)', border:`1px solid ${biasLvl.color}44`,
       borderRadius:6, padding:'12px 16px', marginTop:4,
       fontSize:11, position:'relative',
     }}>
       {/* タイトル＋閉じボタン */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+      <div data-drag-bar style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, cursor:'grab', userSelect:'none' }}>
         <span style={{ fontFamily:M, fontSize:12, fontWeight:700, color:'#00cfff' }}>
           📊 BIAS200 标准化乖离
+          <span style={{ fontSize:9, color:'var(--t3)', marginLeft:6 }}>⠿ 拖动</span>
         </span>
         <button onClick={onClose} style={{
           background:'none', border:'none', color:'var(--t3)',

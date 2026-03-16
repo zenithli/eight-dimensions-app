@@ -103,13 +103,13 @@ export async function POST(req: NextRequest) {
 ⑤板块生态：板块近期排名前20%=5,后20%=1
 ⑥资金流向：量比>2且主力净流入=5;净流入=4;中性=3;净流出=2;大幅流出=1
 ⑦基本面锚：市值/估值/业绩质地，优质=5,普通=3,差=1
-⑧乖离率由系统计算，你只输出①-⑦共7个评分
+⑧乖离率控制：rise1m≤10%=5;10-20%=4;20-25%=3;25-35%=2;>35%=1（⑧评分仅供显示，B分惩罚由系统另算）
 
 JSON格式（严格）：
 {
   "name":"股票名称",
-  "scores":[s1,s2,s3,s4,s5,s6,s7],
-  "analyses":["①详情","②详情","③详情","④详情","⑤详情","⑥详情","⑦详情"],
+  "scores":[s1,s2,s3,s4,s5,s6,s7,s8],
+  "analyses":["①详情","②详情","③详情","④详情","⑤详情","⑥详情","⑦详情","⑧详情"],
   "stopLoss":数字,
   "targetPrice":数字,
   "actionEntry":"建仓建议20字",
@@ -153,7 +153,7 @@ MA20乖离率：${ma20Bias}%`
         aiResult = JSON.parse(cleaned)
       } catch {
         aiResult = {
-          scores: [3,3,3,3,3,3,3],
+          scores: [3,3,3,3,3,3,3,3],
           stopLoss: parseFloat((quote.price * 0.92).toFixed(2)),
           targetPrice: parseFloat((quote.price * 1.15).toFixed(2)),
           summary: '技术面数据获取中，请稍后重试',
@@ -163,7 +163,7 @@ MA20乖离率：${ma20Bias}%`
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ai = aiResult as any
-    const scores: number[] = Array.isArray(ai.scores) ? ai.scores : [3,3,3,3,3,3,3]
+    const scores: number[] = Array.isArray(ai.scores) ? ai.scores : [3,3,3,3,3,3,3,3]
     const trend = +(scores[0] ?? 3), vol2 = +(scores[1] ?? 3), alpha = +(scores[2] ?? 3)
     const baseB = +((trend * 2 + vol2 + alpha) / 4).toFixed(2)
 

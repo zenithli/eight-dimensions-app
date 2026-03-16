@@ -232,12 +232,12 @@ function LogPanel({ logs, onClear, onClose }: { logs: LogEntry[]; onClear: ()=>v
               color: filter===lv ? (lv==='all'?'var(--c)':LOG_COLORS[lv as LogLevel]||'var(--c)') : 'var(--t3)',
               backgroundColor:'transparent', cursor:'pointer', borderRadius:3,
               fontFamily:M,
-            }}>{lv}</button>
+            }}>{{ all:'全部', step:'步骤', ok:'成功', api:'接口', warn:'警告', error:'错误', info:'信息' }[lv] ?? lv}</button>
           ))}
         </div>
         <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
           <button onClick={() => setExpanded(v=>!v)} style={{ fontSize:9, color:'var(--t2)', cursor:'pointer', background:'none', border:'1px solid var(--bd)', padding:'2px 7px', borderRadius:3 }}>
-            {expanded ? '縮小' : '展開'}
+            {expanded ? '收起' : '展开'}
           </button>
           <button onClick={onClear} style={{ fontSize:9, color:'var(--t3)', cursor:'pointer', background:'none', border:'1px solid var(--bd)', padding:'2px 7px', borderRadius:3 }}>
             清空
@@ -249,7 +249,7 @@ function LogPanel({ logs, onClear, onClose }: { logs: LogEntry[]; onClear: ()=>v
       {/* ログリスト */}
       <div ref={listRef} style={{ overflowY:'auto', flex:1, padding:'4px 0' }}>
         {filtered.length === 0 && (
-          <div style={{ padding:'8px 14px', color:'var(--t3)', fontSize:10 }}>ログなし</div>
+          <div style={{ padding:'8px 14px', color:'var(--t3)', fontSize:10 }}>暂无日志</div>
         )}
         {filtered.map(l => (
           <div key={l.id} style={{
@@ -300,9 +300,9 @@ export function TabAnalyze() {
     if (!apiKey) { setError('请先在顶部输入并保存 Anthropic API Key'); return }
 
     setLoading(true); setError(''); setResult(null)
-    setLogs([])  // 新規分析時にログリセット
+    setLogs([]); setCachedBar('')  // 新規分析時にログ・キャッシュバーリセット
     startTimeRef.current = Date.now()
-    // V6: LOGパネルはバッジクリックでのみ開く（自動展開しない）
+    // V6: LOGパネルはバッジクリックでのみ開く（自動展开しない）
     addLog(`开始分析 ${c}`, 'step', `code=${c}`, 'analyze')
     setProgress('① 获取实时行情 + K线均线…')
 
@@ -327,6 +327,11 @@ export function TabAnalyze() {
         const d = data._debug
         if (data._cached) {
         addLog('使用缓存数据（同日同价格）', 'info', `缓存时间: ${data._cachedAt||'—'}`, 'analyze')
+        // V6のsbバー相当
+        const savedAt = data._cachedAt ? new Date(data._cachedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Shanghai'}) : '—'
+        setCachedBar(`⚡ 读取今日缓存（${savedAt}保存）— 行情实时刷新 | 如需重新AI分析请点「强制刷新」`)
+      } else {
+        setCachedBar('')
       }
       addLog(`MA取得: ${d.maFetchLog}`, d.maFetchLog?.toString().includes('失敗') ? 'warn' : 'ok', '', 'analyze')
         addLog(`行情: 価格=${d.quotePrice} 出来高=${d.quoteVolume} 換手率=${d.quoteTurnoverPct}%`, 'info', `成交額=${d.quoteAmount}`, 'analyze')
@@ -389,6 +394,19 @@ export function TabAnalyze() {
             ↺ 强制刷新
           </button>
         </div>
+        {/* V6のsbバー: 今日キャッシュ案内 */}
+        {cachedBar && (
+          <div style={{
+            margin:'8px 0', padding:'7px 12px',
+            backgroundColor:'rgba(0,207,255,0.06)',
+            border:'1px solid rgba(0,207,255,0.25)',
+            borderRadius:4, fontSize:11,
+            color:'var(--c)', fontFamily:'IBM Plex Mono,monospace',
+            display:'flex', alignItems:'center', gap:6,
+          }}>
+            {cachedBar}
+          </div>
+        )}
         {/* V6のqrow: 持仓：現持仓 + 新进攻矛 */}
         <div style={S.quickRow}>
           <span style={S.quickLabel}>持仓：</span>

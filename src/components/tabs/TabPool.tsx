@@ -234,6 +234,59 @@ export function TabPool() {
       </div>
 
       {/* メインカード */}
+      
+      {/* V6: STRATEGY SUMMARY */}
+      <div style={{ backgroundColor:'var(--bg2)', border:'1px solid var(--bd)', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+        <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t3)', letterSpacing:'0.12em', marginBottom:12 }}>
+          STRATEGY SUMMARY · 八维度基准B选股策略（含⑧维度乖离率控制）
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:12 }}>
+          {[
+            { label:'① 趋势共振', desc:'5轴全阳（今日/3日/6日/本月/一月）
+权重×2，0~5分' },
+            { label:'② 量能加速', desc:'量比×方向
+放量上涨5分 / 缩量1~3分' },
+            { label:'③ Alpha超额', desc:'6日涨幅 − 沪指基准
+≥5%→5分，≥2%→4分' },
+            { label:'⑧ 乖离率控制', desc:'近一月>35%直接剔除
+>20%扣0.08~0.35分' },
+            { label:'B分公式', desc:'B = (趋势×2+量能+Alpha)/4
+含⑧维度惩罚/奖励', highlight:true },
+            { label:'选股门槛', desc:'B≥4.5 强力买入
+B≥4.0 建议买入', highlight:true },
+          ].map(item => (
+            <div key={item.label} style={{
+              backgroundColor:'var(--bg3)', border:`1px solid ${item.highlight ? 'rgba(0,207,255,0.3)' : 'var(--bd)'}`,
+              padding:'12px'
+            }}>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t2)', letterSpacing:'2px', marginBottom:6 }}>
+                {item.label}
+              </div>
+              <div style={{ fontSize:11, color: item.highlight ? 'var(--c)' : 'var(--t)', lineHeight:1.8, fontFamily: item.highlight ? 'IBM Plex Mono,monospace' : 'inherit', whiteSpace:'pre-line' }}>
+                {item.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* バックテスト結果 */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+          {[
+            { label:'BACKTEST 胜率', val:'64.7%', color:'var(--g)' },
+            { label:'平均收益', val:'+6.2%', color:'var(--c)' },
+            { label:'最大回撤', val:'-7.1%', color:'var(--g)' },
+            { label:'夏普比率', val:'1.04', color:'var(--c)' },
+          ].map(item => (
+            <div key={item.label} style={{
+              backgroundColor:'rgba(0,232,122,0.05)', border:'1px solid rgba(0,232,122,0.15)',
+              padding:'10px 12px'
+            }}>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--t2)', marginBottom:4 }}>{item.label}</div>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:22, fontWeight:700, color:item.color }}>{item.val}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <Card title="WATCHLIST · 自选股池管理（最多30只）"
         action={
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -325,6 +378,30 @@ export function TabPool() {
           · 平均B分{summary.avgB}
         </div>
       </Card>
+
+      {/* V6: MONTHLY ROTATION · 月度轮换测评（每月替换3只）*/}
+      <div style={{ backgroundColor:'var(--bg2)', border:'1px solid rgba(247,201,72,0.3)', borderRadius:8, padding:'14px 16px', marginBottom:12 }}>
+        <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:'var(--y)', letterSpacing:'0.12em', marginBottom:12 }}>
+          MONTHLY ROTATION · 月度轮换测评（每月替换3只）
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:8, marginBottom:12 }}>
+          {[
+            { label:'剔除条件（末位淘汰）', color:'var(--y)', items:['B分连续2周 < 3.5','本月跑输沪指 > 5%','近一月涨幅 > 40%（过热）'] },
+            { label:'入选条件（新血补充）', color:'var(--g)', items:['B分 ≥ 4.5（连续2周）','月Alpha > 8%','量比 ≥ 1.5（放量启动）'] },
+            { label:'轮换时机',             color:'var(--c)', items:['每月最后一个周五复盘','下月第1个周一执行','每次最多替换3只'] },
+          ].map(rule => (
+            <div key={rule.label} style={{ backgroundColor:'var(--bg3)', border:'1px solid var(--bd)', padding:'10px 12px' }}>
+              <div style={{ fontFamily:'IBM Plex Mono', fontSize:9, color:rule.color, marginBottom:5 }}>{rule.label}</div>
+              <div style={{ fontSize:11, color:'var(--t)', lineHeight:1.8 }}>
+                {rule.items.map((item, i) => <div key={i}>{item}</div>)}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize:9, color:'var(--t3)', fontFamily:'IBM Plex Mono', padding:'8px 12px', backgroundColor:'var(--bg3)', border:'1px solid var(--bd)', borderRadius:4 }}>
+          💡 每月复盘：对照上表判断各股是否触发剔除条件，触发≥2条即执行替换。新候选从自选股池B分排名前列选取。
+        </div>
+      </div>
 
       {/* 追加モーダル */}
       {showAdd && (
