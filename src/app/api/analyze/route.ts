@@ -70,13 +70,36 @@ export async function POST(req: NextRequest) {
       .map(b => (b as { type: 'text'; text: string }).text)
       .join('')
 
-    // JSONを抽出
+    // JSONを抽出（堅牢版）
     const jsonMatch = textContent.match(/\{[\s\S]+\}/)
     if (!jsonMatch) {
       return err('AI返回格式异常', 500, 'AI_PARSE_ERROR')
     }
 
-    const aiResult = JSON.parse(jsonMatch[0])
+    // JSON内の問題文字を修正してパース
+    let aiResult: Record<string, unknown>
+    try {
+      // まずそのままパース
+      aiResult = JSON.parse(jsonMatch[0])
+    } catch {
+      try {
+        // 制御文字・不正な改行を除去してリトライ
+        const cleaned = jsonMatch[0]
+          .replace(/[\x00-\x1F\x7F]/g, ' ')  // 制御文字をスペースに
+          .replace(/,\s*([}\]])/g, '$1')       // 末尾カンマを除去
+          .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // キーをクォート
+        aiResult = JSON.parse(cleaned)
+      } catch {
+        // それでも失敗したらデフォルト値を使用
+        console.warn('[analyze] JSON解析失敗、デフォルト値使用:', jsonMatch[0].slice(0, 100))
+        aiResult = {
+          scores: [3, 3, 3, 3, 3, 3, 3],
+          stopLoss: parseFloat((quote.price * 0.92).toFixed(2)),
+          targetPrice: parseFloat((quote.price * 1.15).toFixed(2)),
+          summary: '技术面数据获取中，请稍后重试',
+        }
+      }
+    }
 
     // B分を計算（⑧次元はサーバー側で計算）
     const scores: number[] = aiResult.scores ?? [3, 3, 3, 3, 3, 3, 3]
