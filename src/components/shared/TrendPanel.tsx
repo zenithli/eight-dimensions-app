@@ -12,7 +12,7 @@
  *  8. 全図にhover tooltip
  *  9. テーマ切り替え対応
  */
-import { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 
 interface KBar {
   date: string; open: number; close: number
@@ -291,7 +291,7 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     ctx.fillStyle = dark ? 'rgba(0,232,122,0.06)' : 'rgba(0,232,122,0.05)'
     ctx.fillRect(PAD.l, y10, gw, Math.max(0,yS(0)-y10))
     // グリッド線
-    ;([[0,'⬜0%','#5a7a9a'],[10,'⚡10%','#ffd23f'],[20,'⚠20%','#ff8c35'],[35,'⛔35%','#ff2d55']] as [number,string,string][]).forEach(([v,lbl,col]) => {
+    ;([[0,'⬜0%','#5a7a9a'],[10,'⚡10%','#ffd23f'],[20,'⚠20%','#ff8c35'],[35,'⛔35%','#ff2d55'] as Array<[number,string,string]>).forEach(([v,lbl,col]) => {
       const y = yS(v)
       if(y<PAD.t||y>PAD.t+gh) return
       ctx.beginPath(); ctx.setLineDash([4,4]); ctx.moveTo(PAD.l,y); ctx.lineTo(PAD.l+gw,y)
@@ -363,7 +363,7 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     ctx.fillRect(PAD.l,PAD.t,gw,Math.max(0,yS(4.5)-PAD.t))
     ctx.fillStyle=dark?'rgba(0,207,255,0.05)':'rgba(0,207,255,0.04)'
     ctx.fillRect(PAD.l,yS(4.5),gw,Math.max(0,yS(4.0)-yS(4.5)))
-    ;([[4.5,'≥4.5强','#00e87a'],[4.0,'≥4.0可','#00cfff'],[3.5,'3.5观望','#ffd23f']] as [number,string,string][]).forEach(([v,lbl,col])=>{
+    ;([[4.5,'≥4.5强','#00e87a'],[4.0,'≥4.0可','#00cfff'],[3.5,'3.5观望','#ffd23f'] as Array<[number,string,string]>).forEach(([v,lbl,col])=>{
       const y=yS(v)
       ctx.beginPath(); ctx.setLineDash([3,3]); ctx.moveTo(PAD.l,y); ctx.lineTo(PAD.l+gw,y)
       ctx.strokeStyle=col+'66'; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([])
@@ -422,7 +422,7 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     ctx.fillStyle=dark?'rgba(0,240,144,.06)':'rgba(0,180,80,.04)'; ctx.fillRect(PAD.l,PAD.t,gw,Math.max(0,y2-PAD.t))
     ctx.fillStyle=dark?'rgba(255,210,63,.06)':'rgba(200,160,0,.04)'; ctx.fillRect(PAD.l,y2,gw,Math.max(0,y1-y2))
     ctx.fillStyle=dark?'rgba(255,45,85,.06)':'rgba(200,0,40,.04)'; ctx.fillRect(PAD.l,y1,gw,Math.max(0,PAD.t+gh-y1))
-    ;([[2,'1:2','#00e87a'],[1,'1:1','#ff3a6e'],[3,'1:3','#00cfff']] as [number,string,string][]).forEach(([v,lbl,col])=>{
+    ;([[2,'1:2','#00e87a'],[1,'1:1','#ff3a6e'],[3,'1:3','#00cfff'] as Array<[number,string,string]>).forEach(([v,lbl,col])=>{
       const y=yS(v)
       ctx.beginPath(); ctx.setLineDash([4,4]); ctx.moveTo(PAD.l,y); ctx.lineTo(PAD.l+gw,y)
       ctx.strokeStyle=col+'55'; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([])
