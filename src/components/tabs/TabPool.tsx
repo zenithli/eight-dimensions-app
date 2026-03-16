@@ -234,8 +234,8 @@ export function TabPool() {
               <tr style={{ borderBottom:'1px solid var(--bd)' }}>
                 {['#','股票','定位','B分','今日%','6日%','近一月%','⑧乖离','止损','目标','操作'].map((h: string) => (
                   <th key={h} style={{
-                    textAlign:'left', fontSize:9, color:'var(--t3)',
-                    paddingBottom:8, paddingRight:10, fontWeight:400, letterSpacing:'0.05em',
+                    textAlign:'left', fontSize:9, color:'var(--t2)',
+                    paddingBottom:8, paddingRight:10, fontWeight:500, letterSpacing:'0.05em',
                   }}>{h}</th>
                 ))}
               </tr>
@@ -309,7 +309,7 @@ function PoolRow({ stock: s, rank, onRemove }: { stock: PoolStockView; rank: num
       onMouseEnter={e => (e.currentTarget.style.backgroundColor='rgba(56,200,255,0.03)')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor='transparent')}
     >
-      <td style={{ padding:'9px 10px 9px 0', color:'var(--t3)' }}>{rank}</td>
+      <td style={{ padding:'9px 10px 9px 0', color:'var(--t2)', fontFamily:'IBM Plex Mono', fontSize:11 }}>{rank}</td>
       <td style={{ padding:'9px 10px 9px 0' }}>
         <div style={{ fontWeight:700, color:'var(--t)' }}>{s.name}</div>
         <div style={{ fontSize:9, color:'var(--c)', fontFamily:'IBM Plex Mono', marginTop:1, letterSpacing:'0.05em' }}>{s.code}</div>

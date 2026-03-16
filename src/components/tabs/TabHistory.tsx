@@ -220,8 +220,8 @@ export function TabHistory() {
                 <tr style={{ borderBottom:'1px solid var(--bd)' }}>
                   {['日時','股票','价格','B分','信号','止损','目标','盈亏比','详情'].map((h: string) => (
                     <th key={h} style={{
-                      textAlign:'left', fontSize:9, color:'var(--t3)',
-                      paddingBottom:8, paddingRight:10, fontWeight:400, letterSpacing:'0.05em',
+                      textAlign:'left', fontSize:9, color:'var(--t2)',
+                      paddingBottom:8, paddingRight:10, fontWeight:500, letterSpacing:'0.05em',
                     }}>{h}</th>
                   ))}
                 </tr>
@@ -295,7 +295,7 @@ function HistoryRow({
         onMouseLeave={e => (e.currentTarget.style.backgroundColor='transparent')}
       >
         {/* 日時 */}
-        <td style={{ padding:'9px 10px 9px 0', color:'var(--t3)', whiteSpace:'nowrap' }}>
+        <td style={{ padding:'9px 10px 9px 0', color:'var(--t2)', whiteSpace:'nowrap', fontFamily:'IBM Plex Mono' }}>
           {dateStr}
         </td>
         {/* 銘柄 */}

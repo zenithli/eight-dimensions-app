@@ -255,7 +255,7 @@ function AlertTable({
       <thead>
         <tr style={{ borderBottom:'1px solid var(--bd)' }}>
           {['股票','方向','目标价','状态','操作'].map((h: string) => (
-            <th key={h} style={{ textAlign:'left', fontSize:9, color:'var(--t3)', paddingBottom:6, paddingRight:12, fontWeight:400 }}>
+            <th key={h} style={{ textAlign:'left', fontSize:9, color:'var(--t2)', paddingBottom:6, paddingRight:12, fontWeight:400 }}>
               {h}
             </th>
           ))}
