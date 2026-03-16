@@ -384,7 +384,7 @@ function CsvModal({
               <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
                 <thead>
                   <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-                    {['状态','代码','名称','成本价','数量','说明'].map(h => (
+                    {['状态','代码','名称','成本价','数量','说明'].map((h: string) => (
                       <th key={h} style={{
                         textAlign:'left', fontSize:9, color:'var(--t3)',
                         paddingBottom:6, paddingRight:10, fontWeight:400,
@@ -539,7 +539,7 @@ function EditPortfolioModal({
           <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-                {['代码','名称','成本价','数量','角色/备注','操作'].map(h => (
+                {['代码','名称','成本价','数量','角色/备注','操作'].map((h: string) => (
                   <th key={h} style={{
                     textAlign:'left', fontSize:9, color:'var(--t3)',
                     paddingBottom:8, paddingRight:8, fontWeight:400,

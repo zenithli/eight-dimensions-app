@@ -56,7 +56,8 @@ const TOTAL_ASSET = 627.5  // 万元
 export function TabTactic() {
   const [activeScheme, setActiveScheme] = useState<'A'|'B'|'C'|'D'>('B')
 
-  const SCHEMES = {
+  type SchemeInfo = { label: string; desc: string; bt: string; current?: boolean }
+  const SCHEMES: Record<typeof activeScheme, SchemeInfo> = {
     A: { label:'方案A — 激進成長',  desc:'全仓进攻矛，追求高收益，波动较大。适合牛市初期', bt:'72% 胜率 +9.8% 均收' },
     B: { label:'方案B — 均衡基准',  desc:'3进攻+2ETF+1观察，兼顾攻守。当前执行方案', bt:'64.7% 胜率 +6.2% 均收', current:true },
     C: { label:'方案C — 稳健防守',  desc:'以ETF为主体，减少个股暴露。适合震荡市', bt:'58% 胜率 +3.8% 均收' },
@@ -144,7 +145,7 @@ export function TabTactic() {
       {/* 四方案比較 */}
       <Card title="四大优化方案 · 对比">
         <div style={{ display:'flex', gap:6, marginBottom:14, flexWrap:'wrap' }}>
-          {(Object.entries(SCHEMES) as [typeof activeScheme, typeof SCHEMES.A][]).map(([key, s]) => (
+          {(Object.entries(SCHEMES) as [typeof activeScheme, SchemeInfo][]).map(([key, s]) => (
             <button key={key} onClick={() => setActiveScheme(key)}
               style={{
                 fontFamily:'IBM Plex Mono', fontSize:10,

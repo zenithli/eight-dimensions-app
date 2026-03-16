@@ -72,25 +72,17 @@ export function getLogs(): LogEntry[] {
 }
 
 // React Hook
-export function useLogger() {
-  // SSR対応: useEffect/useState は lazy import
-  if (typeof window === 'undefined') {
-    return {
-      L: addLog,
-      logs: [] as LogEntry[],
-      clear: clearLogs,
-    }
-  }
+// Note: このファイルは 'use client' コンポーネントからのみ import すること
+import { useState as _useState, useEffect as _useEffect } from 'react'
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useState, useEffect } = require('react')
-  const [logs, setLogs] = useState<LogEntry[]>(_logs)
+export function useLogger(): { L: typeof addLog; logs: LogEntry[]; clear: typeof clearLogs } {
+  const [logs, setLogs] = _useState<LogEntry[]>([..._logs])
 
-  useEffect(() => {
+  _useEffect(() => {
     setLogs([..._logs])
     _listeners.push(setLogs)
     return () => {
-      _listeners = _listeners.filter(fn => fn !== setLogs)
+      _listeners = _listeners.filter((fn: (logs: LogEntry[]) => void) => fn !== setLogs)
     }
   }, [])
 

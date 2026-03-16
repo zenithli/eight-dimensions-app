@@ -218,7 +218,7 @@ export function TabHistory() {
             <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
               <thead>
                 <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-                  {['日時','股票','价格','B分','信号','止损','目标','盈亏比','详情'].map(h => (
+                  {['日時','股票','价格','B分','信号','止损','目标','盈亏比','详情'].map((h: string) => (
                     <th key={h} style={{
                       textAlign:'left', fontSize:9, color:'var(--t3)',
                       paddingBottom:8, paddingRight:10, fontWeight:400, letterSpacing:'0.05em',

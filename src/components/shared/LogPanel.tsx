@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useLogger, clearLogs, type LogLevel } from '@/lib/logger'
+import { useLogger, clearLogs, type LogLevel, type LogEntry } from '@/lib/logger'
 
 const LEVEL_COLOR: Record<LogLevel, string> = {
   ok:    '#00e87a',
@@ -28,12 +28,12 @@ export function LogPanel() {
   const [open,   setOpen]   = useState(false)
   const [filter, setFilter] = useState<FilterLevel>('all')
 
-  const filtered = filter === 'all' ? logs : logs.filter(l => l.level === filter)
-  const errorCount = logs.filter(l => l.level === 'error').length
-  const warnCount  = logs.filter(l => l.level === 'warn').length
+  const filtered = filter === 'all' ? logs : logs.filter((l: LogEntry) => l.level === filter)
+  const errorCount = logs.filter((l: LogEntry) => l.level === 'error').length
+  const warnCount  = logs.filter((l: LogEntry) => l.level === 'warn').length
 
   function exportLogs() {
-    const text = logs.map(l =>
+    const text = logs.map((l: LogEntry) =>
       `[${l.ts}] [${l.level.toUpperCase()}] ${l.msg}${l.detail ? ' | ' + l.detail : ''}`
     ).join('\n')
     const blob = new Blob([text], { type: 'text/plain' })
@@ -108,7 +108,7 @@ export function LogPanel() {
             flexShrink: 0,
           }}>
             {/* レベルフィルター */}
-            {(['all', 'ok', 'info', 'warn', 'error', 'step', 'api'] as FilterLevel[]).map(lv => (
+            {(['all', 'ok', 'info', 'warn', 'error', 'step', 'api'] as FilterLevel[]).map((lv: FilterLevel) => (
               <button key={lv} onClick={() => setFilter(lv)}
                 style={{
                   fontSize: 9, padding: '2px 7px', borderRadius: 3,
@@ -148,7 +148,7 @@ export function LogPanel() {
                 ログなし
               </div>
             ) : (
-              filtered.map(log => (
+              filtered.map((log: LogEntry) => (
                 <LogRow key={log.id} log={log} />
               ))
             )}

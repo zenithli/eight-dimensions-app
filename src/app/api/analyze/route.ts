@@ -62,7 +62,6 @@ export async function POST(req: NextRequest) {
       max_tokens: 1000,
       system,
       messages: [{ role: 'user', content: userMsg }],
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
     })
 
     // レスポンス解析
@@ -130,6 +129,7 @@ export async function POST(req: NextRequest) {
     if (process.env.DATABASE_URL) {
       try {
         const { db } = await import('@/lib/db')
+        if (!db) throw new Error('DB not initialized')
         await db.analysisHistory.create({
           data: {
             code:        resultData.code,

@@ -232,7 +232,7 @@ export function TabPool() {
           <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:'IBM Plex Mono', fontSize:11 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--bd)' }}>
-                {['#','股票','定位','B分','今日%','6日%','近一月%','⑧乖离','止损','目标','操作'].map(h => (
+                {['#','股票','定位','B分','今日%','6日%','近一月%','⑧乖离','止损','目标','操作'].map((h: string) => (
                   <th key={h} style={{
                     textAlign:'left', fontSize:9, color:'var(--t3)',
                     paddingBottom:8, paddingRight:10, fontWeight:400, letterSpacing:'0.05em',
@@ -241,7 +241,13 @@ export function TabPool() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((s, i) => <PoolRow key={s.code} stock={s} rank={i+1} />)}
+              {sorted.map((s, i) => <PoolRow key={s.code} stock={s} rank={i+1} onRemove={(code) => {
+                    setRawStocks(prev => {
+                      const next = prev.filter(x => x.code !== code)
+                      localStorage.setItem(POOL_KEY, JSON.stringify(next))
+                      return next
+                    })
+                  }} />)}
               {sorted.length === 0 && (
                 <tr><td colSpan={11} style={{ textAlign:'center', padding:'40px 0', color:'var(--t3)' }}>
                   暂无股票
@@ -290,7 +296,7 @@ export function TabPool() {
   )
 }
 
-function PoolRow({ stock: s, rank }: { stock: PoolStockView; rank: number }) {
+function PoolRow({ stock: s, rank, onRemove }: { stock: PoolStockView; rank: number; onRemove: (code: string) => void }) {
   const { biasLevel, signal, biasIsReal } = s
   const biasVal = s.ma20Bias ?? s.m1 ?? 0
 
@@ -346,11 +352,7 @@ function PoolRow({ stock: s, rank }: { stock: PoolStockView; rank: number }) {
         <button
           onClick={() => {
             if (!confirm(`确认从股票池中移除 ${s.name}（${s.code}）？`)) return
-            setRawStocks(prev => {
-              const next = prev.filter(x => x.code !== s.code)
-              localStorage.setItem(POOL_KEY, JSON.stringify(next))
-              return next
-            })
+            onRemove(s.code)
           }}
           style={{
             fontSize:9, padding:'3px 8px',

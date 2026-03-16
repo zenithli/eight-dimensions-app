@@ -42,7 +42,7 @@ const VERSIONS = [
 export function TabChangelog() {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      {VERSIONS.map(v => (
+      {VERSIONS.map((v: typeof VERSIONS[0]) => (
         <div key={v.ver} style={{
           position:'relative',
           backgroundColor:'var(--bg2)',
