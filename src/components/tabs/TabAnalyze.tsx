@@ -284,6 +284,7 @@ export function TabAnalyze() {
   const [progress, setProgress] = useState('')
   const [logs, setLogs]         = useState<LogEntry[]>([])
   const [showLog, setShowLog]   = useState(false)  // V6: 初期非表示
+  const [cachedBar, setCachedBar] = useState('')    // V6のsbバー: キャッシュ案内
   const startTimeRef = useRef<number>(0)
 
   const addLog = useCallback((msg: string, level: LogLevel = 'info', detail = '', tag = 'analyze') => {
