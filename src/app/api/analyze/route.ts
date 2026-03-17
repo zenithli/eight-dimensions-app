@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { ok, err } from '@/lib/api-response'
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchRealtimeQuote, fetchKlineDaily } from '@/lib/eastmoney'
+import { calcBias200 } from '@/lib/calcBias200'
 
 // ── サーバーサイドキャッシュ（同日・同価格は再利用） ──
 // Vercelサーバーレス: 同インスタンス内のみ有効（短期ブレ防止に有効）
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     let bias200Data: Record<string,unknown> = { signal:'数据不足', ok: false }
     let maFetchLog = 'K線取得スキップ'
     try {
-      const klinePromise = fetchKlineDaily(code, 220)
+      const klinePromise = fetchKlineDaily(code, 280)  // V6準拠: lmt=280
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('K線タイムアウト(8s)')), 8000)
       )
@@ -63,50 +64,10 @@ export async function POST(req: NextRequest) {
         if (ma20 > 0) {
           ma20Bias = +((quote.price - ma20) / ma20 * 100).toFixed(2)
         }
-        // ── BIAS200 標準化乖離（V6 calcBias200と同一ロジック）──
-        if (bars.length >= 200 && ma200 > 0) {
+        // ── BIAS200（V6 calcBias200.ts 直接呼び出し）──
+        {
           const closes = bars.map((b: {close:number}) => b.close)
-          const b200 = (quote.price - ma200) / ma200 * 100
-          const retSlice = closes.slice(-250)
-          const dailyRets: number[] = []
-          for (let i = 1; i < retSlice.length; i++)
-            if (retSlice[i-1] > 0) dailyRets.push((retSlice[i]-retSlice[i-1])/retSlice[i-1])
-          const mean2 = dailyRets.reduce((a,b)=>a+b,0)/dailyRets.length
-          const annVol = Math.sqrt(dailyRets.reduce((a,b)=>a+(b-mean2)**2,0)/dailyRets.length)*Math.sqrt(250)*100
-          const zScore = annVol > 0 ? b200/annVol : 0
-          let ma200dir = '→'
-          if (closes.length >= 205) {
-            const m5ago = closes.slice(-205,-5).slice(-200).reduce((a,b)=>a+b,0)/200
-            const diff = ma200 - m5ago
-            ma200dir = diff > ma200*0.001 ? '↑' : diff < -ma200*0.001 ? '↓' : '→'
-          }
-          const absZ = Math.abs(zScore)
-          const b200sig = b200 < 0
-            ? (absZ>2.5?'🟢 超跌区间':absZ>1.5?'🔵 偏低':'⬜ 正常')
-            : (absZ>2.5?'🔴 极端乖离':absZ>2.0?'🟠 乖离过大':absZ>1.5?'🟡 偏高':'⬜ 正常区间')
-          // ⑤ 動的警戒線（過去1年BIAS200の80%分位）
-          let dynWarn = 1.85
-          const closesCopy = closes.slice()
-          const bias200arr: number[] = []
-          for (let ii = 199; ii < closesCopy.length; ii++) {
-            const sl = closesCopy.slice(ii-199, ii+1)
-            const ma = sl.reduce((a,b)=>a+b,0)/200
-            const bv = annVol > 0 ? (closesCopy[ii]-ma)/ma*100/annVol : 0
-            bias200arr.push(bv)
-          }
-          if (bias200arr.length >= 10) {
-            const sorted = [...bias200arr].sort((a,b)=>a-b)
-            const dw = sorted[Math.floor(sorted.length*0.8)]
-            if (dw > 0 && dw < 10) dynWarn = +dw.toFixed(2)
-          }
-          bias200Data = {
-            bias200Pct: b200.toFixed(1), annualVol: annVol.toFixed(1),
-            zScore: zScore.toFixed(2), ma200val: ma200.toFixed(2),
-            dynWarn: dynWarn.toFixed(2),
-            ma200dir, signal: b200sig, ok: true
-          }
-        } else {
-          bias200Data = { signal:'数据不足', detail:`需≥200日K线，当前${bars.length}本`, ok: false }
+          bias200Data = calcBias200(closes, quote.price) as unknown as Record<string,unknown>
         }
         maFetchLog = `K線${bars.length}本 MA5=${ma5} MA20=${ma20} MA200=${ma200} 乖离=${ma20Bias}%`
       } else {
@@ -258,7 +219,7 @@ MA20乖离率：${ma20Bias}%`
     else if (biasVal > 10) { biasLabel = `+${biasVal.toFixed(0)}% 正常`;   biasActionText = '三步法正常建仓·止损-8%' }
     else if (biasVal > 0)  { biasLabel = `+${biasVal.toFixed(0)}% 低乖离`; biasActionText = '最佳入场窗口·止损-8%' }
     else if (biasVal < 0)  { biasLabel = `${biasVal.toFixed(0)}% 低位`;    biasActionText = '低乖离，可积极关注' }
-    else                   { biasLabel = '数据不足' }
+    else { biasLabel = '0% 正常'; biasActionText = '三步法正常建仓·止损-8%（⑧数据以实际为准）' }
 
     const resultData = {
       code,

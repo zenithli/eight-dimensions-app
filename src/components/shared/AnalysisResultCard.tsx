@@ -347,9 +347,14 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
             📈 {showTrend ? '收起走势' : '90天走势'}
           </button>
         </div>
-        <div style={{ fontSize:13, lineHeight:2.1, color:'var(--t)', whiteSpace:'pre-wrap' }}>
-          {result.summary || '—'}
-        </div>
+        {/* V6: .atext - 【】で囲んだ部分を青太字に変換 */}
+        <div style={{ fontSize:13, lineHeight:2.1, color:'var(--t)' }}
+          dangerouslySetInnerHTML={{
+            __html: (result.summary || '—')
+              .replace(/【([^】]+)】/g,
+                '<b style="color:var(--c);font-weight:500">【$1】</b>')
+          }}
+        />
         {result.analyses?.some(Boolean) && (
           <div style={{
             marginTop:12, padding:'10px 14px', backgroundColor:'var(--bg3)',

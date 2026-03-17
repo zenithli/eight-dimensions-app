@@ -139,7 +139,7 @@ function RecentBar({ onSelect, disabled }: { onSelect:(code:string)=>void; disab
   }
   // V6のscoreCol: スコア色
   const scoreCol = (s: number) =>
-    s >= 28 ? 'var(--g)' : s >= 22 ? 'var(--c)' : s >= 16 ? 'var(--y)' : 'var(--r)'
+    s >= 28 ? 'var(--g)' : s >= 22 ? 'var(--c)' : s >= 15 ? 'var(--y)' : 'var(--r)'
 
   const M = 'IBM Plex Mono,monospace'
 
