@@ -24,7 +24,13 @@ export async function POST(req: NextRequest) {
     // ① リアルタイム行情取得
     let quote
     try { quote = await fetchRealtimeQuote(code) }
-    catch (e) { return err(`行情获取失败: ${e}`, 502, 'QUOTE_FAILED') }
+    catch (e) {
+      const rawMsg = String(e)
+      const friendlyMsg = rawMsg.includes('fetch failed') || rawMsg.includes('ECONNREFUSED') || rawMsg.includes('abort')
+        ? '行情API连接超时（Vercel→东方财富网络不稳定，请点「强制刷新」重试）'
+        : rawMsg.includes('无效代码') ? `代码${code}无效或未上市` : `行情获取失败: ${rawMsg}`
+      return err(friendlyMsg, 502, 'QUOTE_FAILED')
+    }
 
     // ── キャッシュチェック（強制刷新でない限り当日同価格は再利用） ──
     const key = cacheKey(code, quote.price)
@@ -74,7 +80,10 @@ export async function POST(req: NextRequest) {
         maFetchLog = `K線不足(${bars.length}本)`
       }
     } catch (e) {
-      maFetchLog = `K線失敗: ${e instanceof Error ? e.message : String(e)}`
+      const rawMsg = e instanceof Error ? e.message : String(e)
+      maFetchLog = rawMsg.includes('fetch failed') || rawMsg.includes('abort')
+        ? 'K線API连接超时（将使用AI分析模式）'
+        : `K線取得失敗: ${rawMsg}`
       console.warn('[analyze] MA取得失敗:', maFetchLog)
     }
 

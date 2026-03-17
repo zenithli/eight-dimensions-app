@@ -369,6 +369,7 @@ export function TabAnalyze() {
       const msg = e instanceof Error ? e.message : '分析失败，请重试'
       setError(msg)
       addLog(msg, 'error', e instanceof Error ? (e.stack||'') : '', 'analyze')
+      setShowLog(true)   // エラー時はLOGパネルを自動展開
     } finally {
       const total = ((Date.now()-startTimeRef.current)/1000).toFixed(1)
       addLog(`完了 総時間${total}s`, 'step', '', 'analyze')

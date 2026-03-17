@@ -52,7 +52,27 @@ export async function fetchRealtimeQuote(code: string): Promise<RealtimeQuote> {
     `https://push2.eastmoney.com/api/qt/stock/get?fltt=1&invt=2&fields=${fields}` +
     `&secid=${secid}&ut=b2884a393a59ad64002292a3e90d46a5`
 
-  const res = await fetch(url, { headers: HEADERS, next: { revalidate: 30 } })
+  // タイムアウト10秒 + 失敗時1回リトライ（V6は直接ブラウザfetch、V7はサーバーサイドfetch）
+  const doFetch = async () => {
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 10000)
+    try {
+      const r = await fetch(url, { headers: HEADERS, signal: ac.signal, cache: 'no-store' })
+      clearTimeout(timer)
+      return r
+    } catch (e) {
+      clearTimeout(timer)
+      throw e
+    }
+  }
+  let res: Response
+  try {
+    res = await doFetch()
+  } catch {
+    // 1回リトライ
+    await new Promise(r => setTimeout(r, 1500))
+    res = await doFetch()
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const json = await res.json()
