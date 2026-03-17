@@ -141,6 +141,7 @@ export interface AnalysisResult {
     bias200Pct?: string  // BIAS200(%)
     annualVol?:  string  // 年化波動率
     zScore?:     string  // 標準化乖離
+    dynWarn?:    string  // 動的警戒線（80%分位）← V6のdynWarn
     ma200val?:   string  // MA200価格
     ma200dir?:   string  // MA200方向
     signal?:     string  // 信号
