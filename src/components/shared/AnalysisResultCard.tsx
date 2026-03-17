@@ -361,11 +361,6 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
         </div>
       </div>
 
-      {/* 走勢図（サーバー経由） */}
-      {showTrend && (
-        <TrendPanel code={result.code} stopLoss={result.stopLoss} targetPrice={result.targetPrice}/>
-      )}
-
       {/* ══ ⑤ RISK/REWARD ══ */}
       <div style={cardS('var(--g)')}>
         <div style={ctitS}>RISK / REWARD · 盈亏比</div>
@@ -429,6 +424,11 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
             换股冲动来临时，先看第③条——大多数冲动会自然消失。
           </div>
         </div>
+      )}
+
+      {/* ══ ⑨ 90天走势 ══（V6と同じ最後の位置）*/}
+      {showTrend && (
+        <TrendPanel code={result.code} stopLoss={result.stopLoss} targetPrice={result.targetPrice}/>
       )}
     </div>
   )
