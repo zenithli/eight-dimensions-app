@@ -59,6 +59,7 @@ model AnalysisHistory {
   name        String   @db.VarChar(20)
   price       Float
   changePct   Float    @default(0)
+  sumScore    Int      @default(0)           // V6のtotal: ①〜⑦合計点（/35）
   totalScore  Float    @default(0)           // 综合B分
   signal      String   @default("")          // 买入/观望/止损/规避
   stopLoss    Float?
