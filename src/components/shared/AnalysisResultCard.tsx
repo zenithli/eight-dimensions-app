@@ -201,9 +201,14 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
             value: bias !== 0 ? `${bias > 0 ? '+' : ''}${bias.toFixed(2)}%` : '—',
             color: biasLvl.color,
             sub1: bias200obj?.ok ? `σ: ${bias200obj.zScore}` : `σ: —`,
+            // V6: '警戒'+dynWarn+'σ' + 超/未超
             sub2: bias200obj?.ok
-              ? `警戒: ${parseFloat(bias200obj.zScore as string) > 1.5 ? '⚠超' : '★低乖离'}`
-              : `警戒: ${Math.abs(bias) > 30 ? '⚠超警戒' : Math.abs(bias) > 20 ? '⚡注意' : Math.abs(bias) > 10 ? '✓正常' : '★低乖离'}`,
+              ? (() => {
+                  const z = parseFloat(String(bias200obj.zScore))
+                  const dw = parseFloat(String(bias200obj.dynWarn ?? '1.85'))
+                  return `警戒${dw.toFixed(2)}σ ${z > dw ? '⚠超' : '✓'}`
+                })()
+              : `警戒: ${Math.abs(bias) > 30 ? '⚠超警戒' : Math.abs(bias) > 20 ? '⚡注意' : '✓正常'}`,
             special: true,
           },
         ].map(({ label, value, color, sub1, sub2, special }, i) => (
@@ -394,7 +399,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
           <span>POSITION CALC · 止损仓位计算器</span>
           <span style={{ fontWeight:400, fontSize:8 }}>根据最大亏损额反推合理仓位</span>
         </div>
-        <PositionCalc price={result.price} stopLoss={result.stopLoss}/>
+        <PositionCalc price={result.price} stopLoss={result.stopLoss} targetPrice={result.targetPrice}/>
       </div>
 
       {/* ══ ⑦ ACTION（AIテキスト使用）══ */}
@@ -490,59 +495,119 @@ function RRBar({ price,stopLoss,targetPrice }:{price:number;stopLoss:number;targ
 }
 
 /* ── PositionCalc ── */
-function PositionCalc({ price,stopLoss }:{price:number;stopLoss:number}) {
-  const [capital,setCapital]=useState('1000000')
-  const [maxLoss,setMaxLoss]=useState('2')
-  const cap=parseFloat(capital||'0'), ml=parseFloat(maxLoss||'0')
-  const maxLossAmt=cap*ml/100, riskPS=price-stopLoss
-  const maxShares=riskPS>0?Math.floor(maxLossAmt/riskPS/100)*100:0
-  const posAmt=maxShares*price
-  const posRatio=cap>0?posAmt/cap*100:0
-  const posColor=posRatio>50?'var(--r)':posRatio>30?'var(--y)':'var(--g)'
-  const inp:React.CSSProperties={
-    backgroundColor:'var(--bg3)',border:'1px solid var(--bd2)',color:'var(--t)',
-    fontFamily:'IBM Plex Mono,monospace',fontSize:12,padding:'9px 12px',
-    outline:'none',width:'100%',transition:'border 0.2s',
+function PositionCalc({ price, stopLoss, targetPrice }:{
+  price:number; stopLoss:number; targetPrice?:number
+}) {
+  // V6準拠: 账户净资産(万元) + 万元単位表示
+  const [capitalW, setCapitalW] = useState('627')   // 万元（V6デフォルト627万）
+  const [riskPct,  setRiskPct]  = useState('2')
+  const cap = parseFloat(capitalW || '0')   // 万元
+  const rp  = parseFloat(riskPct  || '0')
+
+  const stopPct   = price > 0 && stopLoss > 0 && stopLoss < price
+                    ? (price - stopLoss) / price * 100 : 0
+  const maxLossAmt = cap * rp / 100           // 万元
+  const positionW  = stopPct > 0 ? maxLossAmt / (stopPct / 100) : 0  // 万元
+
+  // 盈亏比
+  const tp = targetPrice || 0
+  const gain = tp > price ? tp - price : 0
+  const risk = price > stopLoss ? price - stopLoss : 0
+  const rr   = risk > 0 && gain > 0 ? gain / risk : 0
+
+  // 診断（V6完全移植）
+  const diag: string[] = []
+  if (stopPct < 3)  diag.push('⚠️ 止损过紧（<3%），容易被日内震荡触发，建议放宽至支撑位下方')
+  else if (stopPct > 15) diag.push('⚠️ 止损过宽（>15%），单笔亏损风险大，建议分批建仓')
+  else              diag.push(`✅ 止损幅度合理（${stopPct.toFixed(1)}%）`)
+  if (positionW > cap * 0.4) diag.push('⚠️ 建议仓位超过净资产40%，融资账户需谨慎')
+  else if (positionW <= cap * 0.2) diag.push('✅ 仓位保守（≤20%净资产），风险可控')
+  if (rr > 0) {
+    if (rr < 1)      diag.push('❌ 盈亏比<1:1，赚少亏多，不建议操作')
+    else if (rr < 2) diag.push(`⚠️ 盈亏比1:${rr.toFixed(1)}，勉强可操作，建议等更好入场点`)
+    else             diag.push(`✅ 盈亏比1:${rr.toFixed(1)}，风险收益合理`)
   }
+
+  const inp: React.CSSProperties = {
+    backgroundColor:'var(--bg3)', border:'1px solid var(--bd2)', color:'var(--t)',
+    fontFamily:'IBM Plex Mono,monospace', fontSize:12, padding:'9px 12px',
+    outline:'none', width:'100%',
+  }
+  const M = 'IBM Plex Mono,monospace'
+
   return (
     <div>
+      {/* V6準拠: 現価, 止損価, 目標価 / 净资産, 最大亏損% */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:12}}>
         <div>
-          <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:6}}>总资金（元）</div>
-          <input type="number" value={capital} onChange={e=>setCapital(e.target.value)} style={inp}/>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,letterSpacing:'1px',marginBottom:6}}>现价（元）</div>
+          <div style={{...inp,display:'flex',alignItems:'center',color:'var(--t)',fontWeight:700}}>{price > 0 ? price.toFixed(2) : '—'}</div>
         </div>
         <div>
-          <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:6}}>最大亏损（%）</div>
-          <input type="number" value={maxLoss} onChange={e=>setMaxLoss(e.target.value)} style={inp}/>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,letterSpacing:'1px',marginBottom:6}}>止损价（元）</div>
+          <div style={{...inp,display:'flex',alignItems:'center',color:'var(--r)',fontWeight:700}}>{stopLoss > 0 ? stopLoss.toFixed(2) : '—'}</div>
         </div>
         <div>
-          <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:6}}>止损价 / 入场价</div>
-          <div style={{...inp,color:'var(--t2)'}}>¥{stopLoss.toFixed(2)} / ¥{price.toFixed(2)}</div>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,letterSpacing:'1px',marginBottom:6}}>目标价（元）</div>
+          <div style={{...inp,display:'flex',alignItems:'center',color:'var(--g)',fontWeight:700}}>{tp > 0 ? tp.toFixed(2) : '—'}</div>
         </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:8}}>
-        {[
-          {label:'每股风险', val:`¥${riskPS.toFixed(2)}`,color:'var(--r)'},
-          {label:'最大持股数',val:`${maxShares.toLocaleString()}股`,color:'var(--c)'},
-          {label:'建仓金额', val:`¥${posAmt.toLocaleString(undefined,{maximumFractionDigits:0})}`,color:'var(--y)'},
-          {label:'仓位比例', val:`${posRatio.toFixed(1)}%`,color:posColor},
-        ].map(({label,val,color})=>(
-          <div key={label} style={{backgroundColor:'var(--bg3)',border:'1px solid rgba(0,207,255,0.15)',padding:'10px 12px',textAlign:'center'}}>
-            <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',letterSpacing:'1px',marginBottom:4}}>{label}</div>
-            <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:16,fontWeight:700,color}}>{val}</div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
+        <div>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,letterSpacing:'1px',marginBottom:6}}>账户净资产（万元）</div>
+          <input type="number" value={capitalW} onChange={e=>setCapitalW(e.target.value)} style={inp}/>
+        </div>
+        <div>
+          <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,letterSpacing:'1px',marginBottom:6}}>单笔最大亏损（%净资产）</div>
+          <div style={{display:'flex',gap:6,alignItems:'center'}}>
+            <input type="number" step="0.5" value={riskPct} onChange={e=>setRiskPct(e.target.value)} style={{...inp,flex:1}}/>
+            <span style={{fontSize:11,color:'var(--t2)'}}>%</span>
           </div>
-        ))}
+        </div>
       </div>
-      <div style={{height:5,backgroundColor:'var(--bg3)',borderRadius:3,overflow:'hidden',marginBottom:5}}>
-        <div style={{height:'100%',width:`${Math.min(posRatio,100)}%`,backgroundColor:posColor,transition:'width 0.4s',borderRadius:3}}/>
-      </div>
-      {posRatio>50&&<div style={{fontSize:9,color:'var(--r)',fontFamily:'IBM Plex Mono,monospace',marginTop:3}}>⚠ 仓位超过50%，注意融资风险</div>}
-      <div style={{fontSize:9,color:'var(--t2)',fontFamily:'IBM Plex Mono,monospace',marginTop:5}}>公式：最大亏损额 ÷ 每股风险 → 最大A股 · 100股取整</div>
+      {stopPct > 0 && (
+        <div style={{background:'var(--bg3)',border:'1px solid var(--bd2)',padding:'14px 16px',borderRadius:4}}>
+          {/* 4格结果 V6準拠 */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:12}}>
+            {[
+              {label:'止损幅度', value:`-${stopPct.toFixed(1)}%`,            color:'var(--r)'},
+              {label:'最大亏损额',value:`${maxLossAmt.toFixed(1)}万`,         color:'var(--r)'},
+              {label:'建议仓位', value:`${positionW.toFixed(0)}万`,           color:'var(--c)'},
+              {label:'盈亏比',   value:rr>0?`1:${rr.toFixed(1)}`:'—',       color:rr>=2?'var(--g)':rr>=1?'var(--y)':'var(--r)'},
+            ].map(({label,value,color})=>(
+              <div key={label} style={{textAlign:'center'}}>
+                <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,marginBottom:4}}>{label}</div>
+                <div style={{fontSize:18,fontFamily:M,color,fontWeight:700}}>{value}</div>
+              </div>
+            ))}
+          </div>
+          {/* RRバー */}
+          {rr > 0 && (
+            <div style={{marginBottom:8}}>
+              <div style={{fontSize:9,color:'var(--t2)',fontFamily:M,marginBottom:6}}>风险收益可视化</div>
+              <div style={{display:'flex',alignItems:'center',gap:4,fontFamily:M,fontSize:9}}>
+                <span style={{color:'var(--r)'}}>止损</span>
+                <div style={{flex:1,height:8,background:'var(--bg2)',borderRadius:4,overflow:'hidden',position:'relative'}}>
+                  <div style={{position:'absolute',left:0,top:0,height:'100%',
+                    width:`${risk/(risk+gain)*100}%`,background:'var(--r)',borderRadius:'4px 0 0 4px'}}/>
+                  <div style={{position:'absolute',right:0,top:0,height:'100%',
+                    width:`${gain/(risk+gain)*100}%`,background:'var(--g)',borderRadius:'0 4px 4px 0'}}/>
+                </div>
+                <span style={{color:'var(--g)'}}>目标</span>
+              </div>
+            </div>
+          )}
+          {/* 診断 V6準拠 */}
+          <div style={{fontSize:11,color:'var(--t2)',lineHeight:1.6,paddingTop:8,borderTop:'1px solid var(--bd)'}}>
+            {diag.map((d,i)=><div key={i}>{d}</div>)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-/* ── TradeLogicEdit ── */
+
 function TradeLogicEdit({ code,stopLoss }:{code:string;stopLoss:number}) {
   const key=`logic_${code}`
   const [data,setData]=useState({why:'',sell:'',no:''})

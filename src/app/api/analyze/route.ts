@@ -84,9 +84,25 @@ export async function POST(req: NextRequest) {
           const b200sig = b200 < 0
             ? (absZ>2.5?'🟢 超跌区间':absZ>1.5?'🔵 偏低':'⬜ 正常')
             : (absZ>2.5?'🔴 极端乖离':absZ>2.0?'🟠 乖离过大':absZ>1.5?'🟡 偏高':'⬜ 正常区间')
+          // ⑤ 動的警戒線（過去1年BIAS200の80%分位）
+          let dynWarn = 1.85
+          const closesCopy = closes.slice()
+          const bias200arr: number[] = []
+          for (let ii = 199; ii < closesCopy.length; ii++) {
+            const sl = closesCopy.slice(ii-199, ii+1)
+            const ma = sl.reduce((a,b)=>a+b,0)/200
+            const bv = annVol > 0 ? (closesCopy[ii]-ma)/ma*100/annVol : 0
+            bias200arr.push(bv)
+          }
+          if (bias200arr.length >= 10) {
+            const sorted = [...bias200arr].sort((a,b)=>a-b)
+            const dw = sorted[Math.floor(sorted.length*0.8)]
+            if (dw > 0 && dw < 10) dynWarn = +dw.toFixed(2)
+          }
           bias200Data = {
             bias200Pct: b200.toFixed(1), annualVol: annVol.toFixed(1),
             zScore: zScore.toFixed(2), ma200val: ma200.toFixed(2),
+            dynWarn: dynWarn.toFixed(2),
             ma200dir, signal: b200sig, ok: true
           }
         } else {
@@ -221,7 +237,13 @@ MA20乖离率：${ma20Bias}%`
       totalScore >= 3.5 ? '观望'     : '规避'
 
     const p = quote.price
-    const sl = ai.stopLoss ?? parseFloat((p * 0.92).toFixed(2))
+    // V6準拠: 止損鉄底 = max(近10日最低×0.99, 現価×0.92) ≤ 8%
+    // AIが返したstopLossが広すぎる場合（>8%）は×0.92で上書き
+    const aiStopLoss = ai.stopLoss ?? 0
+    const floorStop  = parseFloat((p * 0.92).toFixed(2))  // -8%鉄底
+    const sl = aiStopLoss > 0 && aiStopLoss < p
+      ? (((p - aiStopLoss) / p) > 0.08 ? floorStop : parseFloat(aiStopLoss.toFixed(2)))
+      : floorStop
     const tp = ai.targetPrice ?? parseFloat((p * 1.15).toFixed(2))
     const riskReward = (p > sl && tp > p)
       ? `1:${((tp - p) / (p - sl)).toFixed(1)}`
