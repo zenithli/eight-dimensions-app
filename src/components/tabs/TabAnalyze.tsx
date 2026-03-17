@@ -380,38 +380,7 @@ export function TabAnalyze() {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12, paddingBottom:200 }}>
       <Card title="SINGLE STOCK ANALYSIS · 单股八维度分析">
-        <RecentBar onSelect={c => { setCode(c); run(c) }} disabled={loading}/>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' as const, marginBottom:10 }}>
-          <input
-            value={code}
-            onChange={e => setCode(e.target.value.replace(/\D/g,'').slice(0,6))}
-            onKeyDown={e => e.key==='Enter' && !loading && run()}
-            placeholder="股票代码（A股6位）"
-            maxLength={6}
-            style={S.input}
-          />
-          <button onClick={() => run()} disabled={loading} style={S.btn(loading)}>
-            {loading ? '⟳ 分析中…' : '🔍 AI 分析'}
-          </button>
-          {/* V6と同様: 强制刷新は常に表示 */}
-          <button onClick={() => { setResult(null); run(undefined, true) }} disabled={loading} style={S.refreshBtn}>
-            ↺ 强制刷新
-          </button>
-        </div>
-        {/* V6のsbバー: 今日キャッシュ案内 */}
-        {cachedBar && (
-          <div style={{
-            margin:'8px 0', padding:'7px 12px',
-            backgroundColor:'rgba(0,207,255,0.06)',
-            border:'1px solid rgba(0,207,255,0.25)',
-            borderRadius:4, fontSize:11,
-            color:'var(--c)', fontFamily:'IBM Plex Mono,monospace',
-            display:'flex', alignItems:'center', gap:6,
-          }}>
-            {cachedBar}
-          </div>
-        )}
-        {/* V6のqrow: 持仓：現持仓 + 新进攻矛 */}
+        {/* V6のqrow: 持仓：現持仓 + 新进攻矛 ← 先に表示 */}
         <div style={S.quickRow}>
           <span style={S.quickLabel}>持仓：</span>
           <span style={{ ...S.quickLabel, marginRight:4 }}>现持仓：</span>
@@ -429,6 +398,38 @@ export function TabAnalyze() {
             </button>
           ))}
         </div>
+        {/* input/ボタン */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' as const, marginTop:10, marginBottom:6 }}>
+          <input
+            value={code}
+            onChange={e => setCode(e.target.value.replace(/\D/g,'').slice(0,6))}
+            onKeyDown={e => e.key==='Enter' && !loading && run()}
+            placeholder="股票代码（A股6位）"
+            maxLength={6}
+            style={S.input}
+          />
+          <button onClick={() => run()} disabled={loading} style={S.btn(loading)}>
+            {loading ? '⟳ 分析中…' : '🔍 AI 分析'}
+          </button>
+          <button onClick={() => { setResult(null); run(undefined, true) }} disabled={loading} style={S.refreshBtn}>
+            ↺ 强制刷新
+          </button>
+        </div>
+        {/* V6のsbバー: 今日キャッシュ案内 */}
+        {cachedBar && (
+          <div style={{
+            margin:'4px 0 8px', padding:'7px 12px',
+            backgroundColor:'rgba(0,207,255,0.06)',
+            border:'1px solid rgba(0,207,255,0.25)',
+            borderRadius:4, fontSize:11,
+            color:'var(--c)', fontFamily:'IBM Plex Mono,monospace',
+            display:'flex', alignItems:'center', gap:6,
+          }}>
+            {cachedBar}
+          </div>
+        )}
+        {/* RECENT 最近分析 ← 持仓の下に移動 */}
+        <RecentBar onSelect={c => { setCode(c); run(c) }} disabled={loading}/>
         {error && (
           <div style={S.err}><span>✕</span><span>{error}</span></div>
         )}
