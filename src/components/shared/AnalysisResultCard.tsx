@@ -470,8 +470,12 @@ function RadarChart({ scores }: { scores: Array<{ score: number }> }) {
     const fc = avg>=4 ? 'rgba(0,232,122,0.12)' : avg<=2.5 ? 'rgba(255,45,85,0.12)' : 'rgba(0,207,255,0.12)'
     const sc = avg>=4 ? 'rgba(0,232,122,0.8)'  : avg<=2.5 ? 'rgba(255,45,85,0.8)'  : 'rgba(0,207,255,0.8)'
     return (
-      <polygon fill={fc} stroke={sc} strokeWidth="1.5"
-        points={vals.map((v,i)=>pt(i,v).join(',')).join(' ')}/>
+      <>
+        <polygon fill={fc} stroke={sc} strokeWidth="1.5"
+          points={vals.map((v,i)=>pt(i,v).join(',')).join(' ')}/>
+        {/* V6: 頂点にdot */}
+        {vals.map((v,i)=>{const[x,y]=pt(i,v);return<circle key={i} cx={x} cy={y} r={3} fill={sc}/>})}
+      </>
     )
   })()}
       {labels.map((label,i)=>{const[x,y]=pt(i,5.8);return<text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize="10" fontFamily="IBM Plex Mono,monospace" fill="var(--t2)">{label}</text>})}
