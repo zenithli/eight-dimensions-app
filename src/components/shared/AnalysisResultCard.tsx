@@ -77,7 +77,11 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
   const isPort   = PORTFOLIO_CODES.includes(result.code)
 
   // ⑧乖離: APIから来たbiasLabel/biasActionTextを優先
-  const bias      = result.ma20Bias ?? 0
+  // V6と同じ: BIAS200 = (price - MA200) / MA200 * 100%
+  const bias200obj = result.bias200
+  const bias      = bias200obj?.ok && bias200obj.bias200Pct
+                    ? parseFloat(bias200obj.bias200Pct as string)
+                    : (result.ma20Bias ?? 0)   // fallback: MA20乖離
   const biasLvl   = getBiasLevel(bias)
   const biasLabel = result.biasLabel || biasLvl.label
   const biasAction= result.biasActionText || biasLvl.action
@@ -195,8 +199,11 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
           {
             label:'BIAS200乖离★',
             value: bias !== 0 ? `${bias > 0 ? '+' : ''}${bias.toFixed(2)}%` : '—',
-            color: biasLvl.color, sub1:`σ: ${result.ma200 && result.ma200 > 0 ? ((bias/(Math.abs(bias)*0.55||1))).toFixed(2) : '—'}`,
-            sub2:`警戒: ${Math.abs(bias) > 30 ? '⚠超警戒' : Math.abs(bias) > 20 ? '⚡注意' : Math.abs(bias) > 10 ? '✓正常' : '★低乖离'}`,
+            color: biasLvl.color,
+            sub1: bias200obj?.ok ? `σ: ${bias200obj.zScore}` : `σ: —`,
+            sub2: bias200obj?.ok
+              ? `警戒: ${parseFloat(bias200obj.zScore as string) > 1.5 ? '⚠超' : '★低乖离'}`
+              : `警戒: ${Math.abs(bias) > 30 ? '⚠超警戒' : Math.abs(bias) > 20 ? '⚡注意' : Math.abs(bias) > 10 ? '✓正常' : '★低乖离'}`,
             special: true,
           },
         ].map(({ label, value, color, sub1, sub2, special }, i) => (
@@ -227,6 +234,7 @@ export function AnalysisResultCard({ result }: { result: AnalysisResult }) {
             ma200={result.ma200 || 0}
             biasLvl={biasLvl}
             onClose={() => setShowBiasTip(false)}
+            bias200Data={bias200obj ?? undefined}
           />
         )}
         {/* 行2：MA均線（実値） */}
@@ -582,8 +590,9 @@ function TradeLogicEdit({ code,stopLoss }:{code:string;stopLoss:number}) {
 }
 /* ── Bias200Tooltip（V6仕様・ドラッグ対応）── */
 interface BiasLvlType { color: string; label: string; action: string; severity: number }
-function Bias200Tooltip({ bias, ma200, biasLvl, onClose }: {
+function Bias200Tooltip({ bias, ma200, biasLvl, onClose, bias200Data }: {
   bias: number; ma200: number; biasLvl: BiasLvlType; onClose: ()=>void
+  bias200Data?: Record<string,unknown>
 }) {
   const tipRef = React.useRef<HTMLDivElement>(null)
   // V6のドラッグ実装を移植
@@ -624,8 +633,11 @@ function Bias200Tooltip({ bias, ma200, biasLvl, onClose }: {
     ['> 2.5σ',   '🔴 极端乖离','#ff2d55'],
   ]
   // 年化波動率は簡易推定（実際はK線データから計算するが、ここではMA20乖離から推算）
-  const annualVol = Math.abs(bias) > 0 ? (Math.abs(bias) * 0.8).toFixed(1) : '—'
-  const zScore    = annualVol !== '—' ? (bias / parseFloat(annualVol)).toFixed(2) : '—'
+  // V6準拠: bias200Dataから取得（ない場合は簡易計算）
+  const annualVol = (bias200Data?.ok ? bias200Data.annualVol : null) as string|null
+                    ?? (Math.abs(bias) > 0 ? (Math.abs(bias) * 0.8).toFixed(1) : '—')
+  const zScore    = (bias200Data?.ok ? bias200Data.zScore : null) as string|null
+                    ?? (annualVol !== '—' ? (bias / parseFloat(annualVol)).toFixed(2) : '—')
   const ma200Dir  = ma200 > 0
     ? (bias > 5 ? '↑ 上扬（支撑上涨）' : bias < -5 ? '↓ 下行（阻力风险）' : '→ 走平（中性）')
     : '—'

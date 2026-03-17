@@ -96,7 +96,8 @@ const S = {
 // hitem: 名前 + スコア/35 + 信号（色付き）+ 価格 + 涨跌幅
 interface HistItem {
   code: string; name: string
-  totalScore: number; signal: string
+  sumScore?: number    // V6のtotal: ①〜⑦合計（/35）
+  totalScore: number;  signal: string
   price: number; changePct: number
   stopLoss?: number; targetPrice?: number; riskRatio?: string
 }
@@ -113,6 +114,7 @@ function RecentBar({ onSelect, disabled }: { onSelect:(code:string)=>void; disab
           seen.add(e.code)
           items.push({
             code: e.code, name: e.name,
+            sumScore: e.sumScore,       // V6のtotal: ①〜⑦合計/35
             totalScore: e.totalScore || 0,
             signal: e.signal || '观察',
             price: e.price || 0,
@@ -167,8 +169,8 @@ function RecentBar({ onSelect, disabled }: { onSelect:(code:string)=>void; disab
           >
             {/* V6: 名前 + スコア/35 + 信号 + 価格 + 涨跌幅 */}
             <span style={{ fontWeight:700, color:'var(--t)' }}>{r.name}</span>
-            <span style={{ fontFamily:M, fontSize:10, color: scoreCol(r.totalScore) }}>
-              {r.totalScore}/35
+            <span style={{ fontFamily:M, fontSize:10, color: scoreCol(r.sumScore ?? r.totalScore) }}>
+              {r.sumScore != null ? r.sumScore : Math.round(r.totalScore)}/35
             </span>
             <span style={{ fontSize:9, color: sigColor[r.signal] || 'var(--t2)' }}>
               {r.signal}

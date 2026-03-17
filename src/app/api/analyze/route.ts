@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     // ② K線データ取得（MA5〜MA200、MA20乖離）タイムアウト8秒
     let ma5 = 0, ma10 = 0, ma20 = 0, ma60 = 0, ma120 = 0, ma200 = 0
     let ma20Bias = 0
+    let bias200Data: Record<string,unknown> = { signal:'数据不足', ok: false }
     let maFetchLog = 'K線取得スキップ'
     try {
       const klinePromise = fetchKlineDaily(code, 220)
@@ -61,6 +62,35 @@ export async function POST(req: NextRequest) {
         ma200 = maCalc(200)
         if (ma20 > 0) {
           ma20Bias = +((quote.price - ma20) / ma20 * 100).toFixed(2)
+        }
+        // ── BIAS200 標準化乖離（V6 calcBias200と同一ロジック）──
+        if (bars.length >= 200 && ma200 > 0) {
+          const closes = bars.map((b: {close:number}) => b.close)
+          const b200 = (quote.price - ma200) / ma200 * 100
+          const retSlice = closes.slice(-250)
+          const dailyRets: number[] = []
+          for (let i = 1; i < retSlice.length; i++)
+            if (retSlice[i-1] > 0) dailyRets.push((retSlice[i]-retSlice[i-1])/retSlice[i-1])
+          const mean2 = dailyRets.reduce((a,b)=>a+b,0)/dailyRets.length
+          const annVol = Math.sqrt(dailyRets.reduce((a,b)=>a+(b-mean2)**2,0)/dailyRets.length)*Math.sqrt(250)*100
+          const zScore = annVol > 0 ? b200/annVol : 0
+          let ma200dir = '→'
+          if (closes.length >= 205) {
+            const m5ago = closes.slice(-205,-5).slice(-200).reduce((a,b)=>a+b,0)/200
+            const diff = ma200 - m5ago
+            ma200dir = diff > ma200*0.001 ? '↑' : diff < -ma200*0.001 ? '↓' : '→'
+          }
+          const absZ = Math.abs(zScore)
+          const b200sig = b200 < 0
+            ? (absZ>2.5?'🟢 超跌区间':absZ>1.5?'🔵 偏低':'⬜ 正常')
+            : (absZ>2.5?'🔴 极端乖离':absZ>2.0?'🟠 乖离过大':absZ>1.5?'🟡 偏高':'⬜ 正常区间')
+          bias200Data = {
+            bias200Pct: b200.toFixed(1), annualVol: annVol.toFixed(1),
+            zScore: zScore.toFixed(2), ma200val: ma200.toFixed(2),
+            ma200dir, signal: b200sig, ok: true
+          }
+        } else {
+          bias200Data = { signal:'数据不足', detail:`需≥200日K线，当前${bars.length}本`, ok: false }
         }
         maFetchLog = `K線${bars.length}本 MA5=${ma5} MA20=${ma20} MA200=${ma200} 乖离=${ma20Bias}%`
       } else {
@@ -166,6 +196,8 @@ MA20乖离率：${ma20Bias}%`
     const scores: number[] = Array.isArray(ai.scores) ? ai.scores : [3,3,3,3,3,3,3,3]
     const trend = +(scores[0] ?? 3), vol2 = +(scores[1] ?? 3), alpha = +(scores[2] ?? 3)
     const baseB = +((trend * 2 + vol2 + alpha) / 4).toFixed(2)
+    // V6: total = sum(①〜⑦) 最大35点（リング・RECENT表示用）
+    const sumScore = scores.slice(0, 7).reduce((a: number, b: number) => a + b, 0)
 
     // ⑧乖離制御値: V6と同一 = 「近一月涨幅(rise1m)」を使用
     // V6: const biasMonth = poolStock.m1 → rise1m相当
@@ -222,9 +254,11 @@ MA20乖离率：${ma20Bias}%`
       // MA均線
       ma5, ma10, ma20, ma60, ma120, ma200,
       ma20Bias,
+      bias200: bias200Data,
       biasLabel,
       biasActionText,
       // B分・信号
+      sumScore,
       totalScore,
       signal,
       stopLoss:    sl,
@@ -261,7 +295,7 @@ MA20乖离率：${ma20Bias}%`
         if (!db) throw new Error('DB not initialized')
         await db.analysisHistory.create({ data: {
           code, name: resultData.name, price: p, changePct: quote.changePct,
-          totalScore, signal, stopLoss: sl, targetPrice: tp,
+          sumScore, totalScore, signal, stopLoss: sl, targetPrice: tp,
           riskRatio: riskReward, summary: resultData.summary,
           scoresJson: JSON.stringify(resultData.scores),
         }})

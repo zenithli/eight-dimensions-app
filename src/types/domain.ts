@@ -119,7 +119,8 @@ export interface AnalysisResult {
   name:           string
   price:          number
   changePct:      number
-  totalScore:     number      // 综合B分
+  sumScore:       number      // V6のtotal: ①〜⑦合計点（/35）リング・RECENT表示用
+  totalScore:     number      // 综合B分（基准B）
   change?:        number
   high?:          number
   low?:           number
@@ -135,7 +136,17 @@ export interface AnalysisResult {
   ma60?:          number
   ma120?:         number
   ma200?:         number
-  ma20Bias?:      number      // MA20乖離率（%）
+  ma20Bias?:      number
+  bias200?: {          // V6 calcBias200の結果
+    bias200Pct?: string  // BIAS200(%)
+    annualVol?:  string  // 年化波動率
+    zScore?:     string  // 標準化乖離
+    ma200val?:   string  // MA200価格
+    ma200dir?:   string  // MA200方向
+    signal?:     string  // 信号
+    ok?:         boolean
+    detail?:     string
+  }      // MA20乖離率（%）
   biasLabel?:     string      // 乖離ラベル（+22% 注意 など）
   biasActionText?: string     // 乖離操作建議
   signal:         string
@@ -178,6 +189,7 @@ export interface HistoryEntry {
   name:         string
   price:        number
   changePct:    number
+  sumScore?:    number      // ①〜⑦合計（/35）
   totalScore:   number
   signal:       string
   stopLoss?:    number

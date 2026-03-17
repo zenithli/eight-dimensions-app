@@ -77,7 +77,7 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
   }
 
   // ── K線データから結果計算 ── V6コード完全移植版
-  const calcResults = useCallback((bars: KBar[]): TrendResult[] => {
+  const calcResults = useCallback((bars: KBar[], shMap: Record<string,number> = {}): TrendResult[] => {
     // V6と同一: stockK全体 + 最後の90本をklines対象にする
     const stockK = bars
     const klines = stockK.slice(-90)
@@ -125,9 +125,15 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
         else vp = 3
       }
 
-      // ③ 相対強弱RS ── V6完全一致（個別changePctのみ、沪指なし版）
+      // ③ 相対強弱RS ── V6完全移植（shMapがあれば相対計算、なければ絶対値）
       let rs = 3
-      rs = k.changePct > 1.5 ? 5 : k.changePct > 0.3 ? 4 : k.changePct > -0.3 ? 3 : k.changePct > -1.5 ? 2 : 1
+      const sh = shMap[k.date]
+      if (sh !== undefined && Math.abs(sh) > 0.01) {
+        const r = k.changePct / sh
+        rs = r >= 2 ? 5 : r >= 1 ? 4 : r >= 0 ? 3 : r >= -1 ? 2 : 1
+      } else {
+        rs = k.changePct > 1.5 ? 5 : k.changePct > 0.3 ? 4 : k.changePct > -0.3 ? 3 : k.changePct > -1.5 ? 2 : 1
+      }
 
       const comp = +((trend + vp + rs) / 3).toFixed(2)
 
@@ -371,12 +377,10 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
     const gw = W-PAD.l-PAD.r, gh = H-PAD.t-PAD.b
     const n = data.length
     ctx.fillStyle = dark?'#04070f':'#f0f4f8'; ctx.fillRect(0,0,W,H)
-    // 動的Y軸: データ範囲+余白。閾値3.5が必ず表示されるよう下限調整
-    const vals = data.map(d=>d.bScoreSm||d.bScore||1)
-    const dMin = Math.min(...vals), dMax = Math.max(...vals)
-    const yLo  = Math.max(0, Math.min(dMin - 0.4, 2.8))   // 下限: データ最低-0.4 かつ最高2.8
-    const yHi  = Math.max(5.5, dMax + 0.3)                 // 上限: 最低5.5
-    const yRange = yHi - yLo
+    // 固定Y軸: 2.5〜5.5 → 4.0がちょうど中央(50%) ← ユーザー要望
+    // (4.0-2.5)/(5.5-2.5) = 1.5/3.0 = 50%
+    const yLo = 2.5, yHi = 5.5
+    const yRange = yHi - yLo  // = 3.0
     const yS=(v:number)=>PAD.t+gh-((Math.max(yLo,Math.min(yHi,v))-yLo)/yRange)*gh
     const xS=(i:number)=>PAD.l+i*(gw/(n-1))
     // 閾値背景
@@ -599,13 +603,25 @@ export function TrendPanel({ code, stopLoss, targetPrice }: TrendPanelProps) {
   async function handleLoad() {
     setLoading(true); setErrMsg('')
     try {
-      const res = await fetch(`/api/kline?code=${code}&limit=160`)
+      // V6: Promise.all で個別株 + 沪指(000001) を同時取得
+      const [res, resSH] = await Promise.all([
+        fetch(`/api/kline?code=${code}&limit=160`),
+        fetch(`/api/kline?code=000001&limit=160`),
+      ])
       if (!res.ok) throw new Error('HTTP ' + res.status)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || '数据获取失败')
       const bars: KBar[] = json.data || []
       if (bars.length === 0) throw new Error('暂无K线数据')
-      const calc = calcResults(bars)
+      // 沪指データ（失敗してもRS計算は絶対値フォールバック）
+      let shMap: Record<string, number> = {}
+      try {
+        const jsonSH = await resSH.json()
+        if (jsonSH.ok && jsonSH.data?.length) {
+          jsonSH.data.forEach((k: KBar) => { shMap[k.date] = k.changePct })
+        }
+      } catch { /* 沪指失敗は無視 */ }
+      const calc = calcResults(bars, shMap)
       setResults(calc); setLoaded(true)
     } catch (e: unknown) {
       setErrMsg(e instanceof Error ? e.message : '加载失败')
