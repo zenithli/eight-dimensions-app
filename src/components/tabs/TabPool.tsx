@@ -242,18 +242,12 @@ export function TabPool() {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:12 }}>
           {[
-            { label:'① 趋势共振', desc:'5轴全阳（今日/3日/6日/本月/一月）
-权重×2，0~5分' },
-            { label:'② 量能加速', desc:'量比×方向
-放量上涨5分 / 缩量1~3分' },
-            { label:'③ Alpha超额', desc:'6日涨幅 − 沪指基准
-≥5%→5分，≥2%→4分' },
-            { label:'⑧ 乖离率控制', desc:'近一月>35%直接剔除
->20%扣0.08~0.35分' },
-            { label:'B分公式', desc:'B = (趋势×2+量能+Alpha)/4
-含⑧维度惩罚/奖励', highlight:true },
-            { label:'选股门槛', desc:'B≥4.5 强力买入
-B≥4.0 建议买入', highlight:true },
+            { label:'① 趋势共振', desc:'5轴全阳（今日/3日/6日/本月/一月）\n权重×2，0~5分' },
+            { label:'② 量能加速', desc:'量比×方向\n放量上涨5分 / 缩量1~3分' },
+            { label:'③ Alpha超额', desc:'6日涨幅 − 沪指基准\n≥5%→5分，≥2%→4分' },
+            { label:'⑧ 乖离率控制', desc:'近一月>35%直接剔除\n>20%扣0.08~0.35分' },
+            { label:'B分公式', desc:'B = (趋势×2+量能+Alpha)/4\n含⑧维度惩罚/奖励', highlight:true },
+            { label:'选股门槛', desc:'B≥4.5 强力买入\nB≥4.0 建议买入', highlight:true },
           ].map(item => (
             <div key={item.label} style={{
               backgroundColor:'var(--bg3)', border:`1px solid ${item.highlight ? 'rgba(0,207,255,0.3)' : 'var(--bd)'}`,
